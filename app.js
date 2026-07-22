@@ -10,14 +10,14 @@
 // ────────────────────────────────────────────────────────────
 
 const STORE = {
-  TASKS   : 'ff_tasks',
+  TASKS: 'ff_tasks',
   SESSIONS: 'ff_sessions',
-  TIMER   : 'ff_timer',
+  TIMER: 'ff_timer',
   SETTINGS: 'ff_settings',
 };
 
-const TAB_ORDER   = ['pomodoro', 'todo', 'history', 'settings'];
-const RING_CIRC   = 326.73; // 2π × 52
+const TAB_ORDER = ['pomodoro', 'todo', 'history', 'settings'];
+const RING_CIRC = 326.73; // 2π × 52
 
 // ────────────────────────────────────────────────────────────
 // STORAGE HELPERS
@@ -27,7 +27,7 @@ function load(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
 }
 function persist(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -51,9 +51,9 @@ function fmtDur(secs) {
   const m = Math.floor((secs % 3600) / 60);
   const s = secs % 60;
   if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0)          return `${h}h`;
+  if (h > 0) return `${h}h`;
   if (m > 0 && s > 0) return `${m}m ${s}s`;
-  if (m > 0)          return `${m}m`;
+  if (m > 0) return `${m}m`;
   return `${s}s`;
 }
 
@@ -67,27 +67,27 @@ function fmtTime(secs) {
 
 /** Format a timestamp for History rows */
 function fmtTimestamp(ts) {
-  const d    = new Date(ts);
-  const now  = new Date();
-  const todayMid     = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const d = new Date(ts);
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterdayMid = todayMid - 86_400_000;
-  const sessionMid   = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const sessionMid = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  if (sessionMid === todayMid)     return timeStr;
+  if (sessionMid === todayMid) return timeStr;
   if (sessionMid === yesterdayMid) return `Yesterday · ${timeStr}`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + timeStr;
 }
 
 /** Format a date for History group dividers */
 function fmtDateGroup(ts) {
-  const d    = new Date(ts);
-  const now  = new Date();
-  const todayMid     = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const d = new Date(ts);
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterdayMid = todayMid - 86_400_000;
-  const sessionMid   = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const sessionMid = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-  if (sessionMid === todayMid)     return 'Today';
+  if (sessionMid === todayMid) return 'Today';
   if (sessionMid === yesterdayMid) return 'Yesterday';
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
@@ -104,28 +104,28 @@ function sumStudySecs(sessions) {
 // ────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS = {
-  theme        : 'dark',
-  liquidGlass  : false,
-  sound        : true,
-  soundPreset  : 'bell',
+  theme: 'dark',
+  liquidGlass: false,
+  sound: true,
+  soundPreset: 'bell',
   notifications: true,
 };
 
 const DEFAULT_TIMER = {
-  active       : false,
-  running      : false,
-  type         : 'study',    // 'study' | 'break'
-  startTs      : null,       // Date.now() when last resumed
-  targetSecs   : 1500,       // duration of current segment
-  elapsed      : 0,          // seconds accumulated before last pause
-  cycle        : 1,
-  totalCycles  : 4,
-  studyMinutes : 25,
-  breakMinutes : 5,
-  autoMode     : false,
-  linkedTaskId : null,
-  pauses       : 0,
-  sessionStart : null,       // when this study segment began (wall time)
+  active: false,
+  running: false,
+  type: 'study',    // 'study' | 'break'
+  startTs: null,       // Date.now() when last resumed
+  targetSecs: 1500,       // duration of current segment
+  elapsed: 0,          // seconds accumulated before last pause
+  cycle: 1,
+  totalCycles: 4,
+  studyMinutes: 25,
+  breakMinutes: 5,
+  autoMode: false,
+  linkedTaskId: null,
+  pauses: 0,
+  sessionStart: null,       // when this study segment began (wall time)
 };
 
 // ────────────────────────────────────────────────────────────
@@ -133,18 +133,18 @@ const DEFAULT_TIMER = {
 // ────────────────────────────────────────────────────────────
 
 const state = {
-  tab             : 'pomodoro',
-  tasks           : load(STORE.TASKS)    || [],
-  sessions        : load(STORE.SESSIONS) || [],
-  settings        : { ...DEFAULT_SETTINGS, ...(load(STORE.SETTINGS) || {}) },
-  timer           : { ...DEFAULT_TIMER,    ...(load(STORE.TIMER)    || {}) },
+  tab: 'pomodoro',
+  tasks: load(STORE.TASKS) || [],
+  sessions: load(STORE.SESSIONS) || [],
+  settings: { ...DEFAULT_SETTINGS, ...(load(STORE.SETTINGS) || {}) },
+  timer: { ...DEFAULT_TIMER, ...(load(STORE.TIMER) || {}) },
   // filters
-  todoTagFilter   : 'all',
+  todoTagFilter: 'all',
   todoPriorityFilter: 'all',
-  showCompleted   : false,
-  histTagFilter   : 'all',
+  showCompleted: false,
+  histTagFilter: 'all',
   // modal
-  editingTaskId   : null,
+  editingTaskId: null,
 };
 
 // ── If page was reloaded while timer was running, compute elapsed since then ──
@@ -164,87 +164,87 @@ const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
 // Nav
-const navTabs        = $$('.nav-tab');
+const navTabs = $$('.nav-tab');
 const navSessionInfo = $('#nav-session-info');
-const sessionNavLbl  = $('#session-nav-label');
+const sessionNavLbl = $('#session-nav-label');
 
 // Pomodoro
-const elStatusPhase  = $('#status-phase');
-const elStatusTime   = $('#status-time');
-const elStatusCycle  = $('#status-cycle');
+const elStatusPhase = $('#status-phase');
+const elStatusTime = $('#status-time');
+const elStatusCycle = $('#status-cycle');
 const elRingProgress = $('#ring-progress');
-const elStatusGlow   = $('#status-glow');
-const elBtnStart     = $('#btn-start');
-const elBtnStartLbl  = $('#btn-start-label');
-const elBtnReset     = $('#btn-reset');
-const elStudyMins    = $('#studyMinutes');
-const elBreakMins    = $('#breakMinutes');
-const elTotalCycles  = $('#totalCycles');
-const elAutoMode     = $('#autoMode');
-const elLinkedDisp   = $('#linked-task-display');
-const elBtnLinkTask  = $('#btn-link-task');
-const elBtnEndSession= $('#btn-end-session');
-const elPauseCard    = $('#pause-stats-card');
-const elPauseCount   = $('#pause-count');
-const elPausePhaseLbl= $('#pause-phase-label');
+const elStatusGlow = $('#status-glow');
+const elBtnStart = $('#btn-start');
+const elBtnStartLbl = $('#btn-start-label');
+const elBtnReset = $('#btn-reset');
+const elStudyMins = $('#studyMinutes');
+const elBreakMins = $('#breakMinutes');
+const elTotalCycles = $('#totalCycles');
+const elAutoMode = $('#autoMode');
+const elLinkedDisp = $('#linked-task-display');
+const elBtnLinkTask = $('#btn-link-task');
+const elBtnEndSession = $('#btn-end-session');
+const elPauseCard = $('#pause-stats-card');
+const elPauseCount = $('#pause-count');
+const elPausePhaseLbl = $('#pause-phase-label');
 
 // Fullscreen
-const elFs           = $('#fullscreen-timer');
-const elFsPhase      = $('#fs-phase');
-const elFsCycle      = $('#fs-cycle');
-const elFsTime       = $('#fs-time');
-const elFsTask       = $('#fs-task');
+const elFs = $('#fullscreen-timer');
+const elFsPhase = $('#fs-phase');
+const elFsCycle = $('#fs-cycle');
+const elFsTime = $('#fs-time');
+const elFsTask = $('#fs-task');
 
 // Todo
-const elTaskList         = $('#task-list');
-const elTodoEmpty        = $('#todo-empty');
-const elTagFilterChips   = $('#tag-filter-chips');
-const elPriorityFilter   = $('#priority-filter');
-const elShowCompleted    = $('#show-completed');
-const elBtnAddTask       = $('#btn-add-task');
+const elTaskList = $('#task-list');
+const elTodoEmpty = $('#todo-empty');
+const elTagFilterChips = $('#tag-filter-chips');
+const elPriorityFilter = $('#priority-filter');
+const elShowCompleted = $('#show-completed');
+const elBtnAddTask = $('#btn-add-task');
 
 // History
-const elMetricToday      = $('#metric-today');
-const elMetricTodayCnt   = $('#metric-today-count');
-const elMetricWeek       = $('#metric-week');
-const elMetricWeekCnt    = $('#metric-week-count');
-const elMetricAlltime    = $('#metric-alltime');
+const elMetricToday = $('#metric-today');
+const elMetricTodayCnt = $('#metric-today-count');
+const elMetricWeek = $('#metric-week');
+const elMetricWeekCnt = $('#metric-week-count');
+const elMetricAlltime = $('#metric-alltime');
 const elMetricAlltimeCnt = $('#metric-alltime-count');
-const elSessionList      = $('#session-list');
-const elHistoryEmpty     = $('#history-empty');
-const elHistTagChips     = $('#history-tag-chips');
+const elSessionList = $('#session-list');
+const elHistoryEmpty = $('#history-empty');
+const elHistTagChips = $('#history-tag-chips');
 const elTagTotalsSection = $('#tag-totals-section');
-const elTagTotalsList    = $('#tag-totals-list');
+const elTagTotalsList = $('#tag-totals-list');
 
 // Settings
-const elThemeDark        = $('#theme-dark');
-const elThemeLight       = $('#theme-light');
-const elLiquidGlass      = $('#liquidGlass');
-const elSoundEnabled     = $('#soundEnabled');
-const elNotifEnabled     = $('#notificationsEnabled');
-const elSoundPreset      = $('#soundPreset');
-const elBtnTestSound     = $('#btn-test-sound');
-const elSoundPresetRow   = $('#sound-preset-row');
-const elBtnClearHistory  = $('#btn-clear-history');
-const elBtnClearAll      = $('#btn-clear-all');
+const elThemeDark = $('#theme-dark');
+const elThemeLight = $('#theme-light');
+const elLiquidGlass = $('#liquidGlass');
+const elSoundEnabled = $('#soundEnabled');
+const elNotifEnabled = $('#notificationsEnabled');
+const elSoundPreset = $('#soundPreset');
+const elBtnTestSound = $('#btn-test-sound');
+const elSoundPresetRow = $('#sound-preset-row');
+const elBtnClearHistory = $('#btn-clear-history');
+const elBtnClearAll = $('#btn-clear-all');
 
 // Task modal
-const elModalBackdrop    = $('#modal-backdrop');
-const elModalTitle       = $('#modal-title');
-const elTaskForm         = $('#task-form');
-const elTaskTitle        = $('#task-title');
-const elTaskDesc         = $('#task-description');
-const elTagPreview       = $('#tag-preview');
-const elModalSubmit      = $('#modal-submit');
-const elModalClose       = $('#modal-close');
-const elModalCancel      = $('#modal-cancel');
+const elModalBackdrop = $('#modal-backdrop');
+const elModalTitle = $('#modal-title');
+const elTaskForm = $('#task-form');
+const elTaskTitle = $('#task-title');
+const elTaskDesc = $('#task-description');
+const elTagPreview = $('#tag-preview');
+const elModalSubmit = $('#modal-submit');
+const elModalClose = $('#modal-close');
+const elModalCancel = $('#modal-cancel');
 
 // Link modal
-const elLinkBackdrop     = $('#link-modal-backdrop');
-const elLinkTaskList     = $('#link-task-list');
-const elLinkModalClose   = $('#link-modal-close');
-const elLinkModalCancel  = $('#link-modal-cancel');
-const elBtnUnlink        = $('#btn-unlink-task');
+const elLinkBackdrop = $('#link-modal-backdrop');
+const elLinkTaskList = $('#link-task-list');
+const elLinkModalClose = $('#link-modal-close');
+const elLinkModalCancel = $('#link-modal-cancel');
+const elBtnUnlink = $('#btn-unlink-task');
 
 // ────────────────────────────────────────────────────────────
 // AUDIO ENGINE
@@ -322,7 +322,7 @@ async function requestNotifPermission() {
 function notify(title, body) {
   if (!state.settings.notifications) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try { new Notification(title, { body }); } catch {}
+  try { new Notification(title, { body }); } catch { }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -333,11 +333,11 @@ function navigate(to) {
   if (to === state.tab) return;
 
   const fromIdx = TAB_ORDER.indexOf(state.tab);
-  const toIdx   = TAB_ORDER.indexOf(to);
+  const toIdx = TAB_ORDER.indexOf(to);
   const forward = toIdx > fromIdx;
 
   const fromEl = document.getElementById(`page-${state.tab}`);
-  const toEl   = document.getElementById(`page-${to}`);
+  const toEl = document.getElementById(`page-${to}`);
 
   // Position incoming page without transition
   toEl.style.transition = 'none';
@@ -363,7 +363,7 @@ function navigate(to) {
 
   // Trigger page-specific renders
   if (to === 'history') renderHistory();
-  if (to === 'todo')    renderTasks();
+  if (to === 'todo') renderTasks();
 }
 
 // ────────────────────────────────────────────────────────────
@@ -407,12 +407,12 @@ function endSession() {
   const prev = state.timer;
   state.timer = {
     ...DEFAULT_TIMER,
-    studyMinutes : prev.studyMinutes,
-    breakMinutes : prev.breakMinutes,
-    totalCycles  : prev.totalCycles,
-    autoMode     : prev.autoMode,
-    linkedTaskId : prev.linkedTaskId,
-    targetSecs   : prev.studyMinutes * 60,
+    studyMinutes: prev.studyMinutes,
+    breakMinutes: prev.breakMinutes,
+    totalCycles: prev.totalCycles,
+    autoMode: prev.autoMode,
+    linkedTaskId: prev.linkedTaskId,
+    targetSecs: prev.studyMinutes * 60,
   };
 
   persist(STORE.TIMER, state.timer);
@@ -430,13 +430,13 @@ function startTimer() {
 
   if (!t.active) {
     // Fresh session — initialize all fields from config inputs
-    t.active       = true;
-    t.type         = 'study';
-    t.cycle        = 1;
-    t.elapsed      = 0;
-    t.pauses       = 0;
+    t.active = true;
+    t.type = 'study';
+    t.cycle = 1;
+    t.elapsed = 0;
+    t.pauses = 0;
     t.sessionStart = Date.now();
-    t.targetSecs   = t.studyMinutes * 60;
+    t.targetSecs = t.studyMinutes * 60;
   }
 
 
@@ -481,12 +481,12 @@ function resetTimer() {
   const prev = state.timer;
   state.timer = {
     ...DEFAULT_TIMER,
-    studyMinutes : prev.studyMinutes,
-    breakMinutes : prev.breakMinutes,
-    totalCycles  : prev.totalCycles,
-    autoMode     : prev.autoMode,
-    linkedTaskId : prev.linkedTaskId,
-    targetSecs   : prev.studyMinutes * 60,
+    studyMinutes: prev.studyMinutes,
+    breakMinutes: prev.breakMinutes,
+    totalCycles: prev.totalCycles,
+    autoMode: prev.autoMode,
+    linkedTaskId: prev.linkedTaskId,
+    targetSecs: prev.studyMinutes * 60,
   };
 
   persist(STORE.TIMER, state.timer);
@@ -503,14 +503,14 @@ function tick() {
   if (!state.timer.running) return;
 
   const remaining = getRemaining();
-  const progress  = getProgress();
+  const progress = getProgress();
 
   // Update fullscreen display
   elFsTime.textContent = fmtTime(remaining);
 
   // Update ring & status card (visible when FS is hidden after pause)
   updateRing(progress);
-  elStatusTime.textContent  = fmtTime(remaining);
+  elStatusTime.textContent = fmtTime(remaining);
 
   if (remaining <= 0) {
     onSegmentComplete();
@@ -568,12 +568,12 @@ function onSegmentComplete() {
 
 function beginBreak() {
   const t = state.timer;
-  t.type         = 'break';
-  t.elapsed      = 0;
-  t.targetSecs   = t.breakMinutes * 60;
-  t.running      = true;
-  t.startTs      = Date.now();
-  t.pauses       = 0;
+  t.type = 'break';
+  t.elapsed = 0;
+  t.targetSecs = t.breakMinutes * 60;
+  t.running = true;
+  t.startTs = Date.now();
+  t.pauses = 0;
   t.sessionStart = Date.now();
 
   persist(STORE.TIMER, t);
@@ -583,12 +583,12 @@ function beginBreak() {
 
 function beginNextStudy() {
   const t = state.timer;
-  t.type         = 'study';
-  t.elapsed      = 0;
-  t.targetSecs   = t.studyMinutes * 60;
-  t.running      = true;
-  t.startTs      = Date.now();
-  t.pauses       = 0;
+  t.type = 'study';
+  t.elapsed = 0;
+  t.targetSecs = t.studyMinutes * 60;
+  t.running = true;
+  t.startTs = Date.now();
+  t.pauses = 0;
   t.sessionStart = Date.now();
 
   persist(STORE.TIMER, t);
@@ -600,12 +600,12 @@ function finishSession() {
   const prev = state.timer;
   state.timer = {
     ...DEFAULT_TIMER,
-    studyMinutes : prev.studyMinutes,
-    breakMinutes : prev.breakMinutes,
-    totalCycles  : prev.totalCycles,
-    autoMode     : prev.autoMode,
-    linkedTaskId : prev.linkedTaskId,
-    targetSecs   : prev.studyMinutes * 60,
+    studyMinutes: prev.studyMinutes,
+    breakMinutes: prev.breakMinutes,
+    totalCycles: prev.totalCycles,
+    autoMode: prev.autoMode,
+    linkedTaskId: prev.linkedTaskId,
+    targetSecs: prev.studyMinutes * 60,
   };
 
   persist(STORE.TIMER, state.timer);
@@ -627,17 +627,17 @@ function saveSession(t) {
     : null;
 
   const session = {
-    id         : uid(),
-    taskId     : task ? task.id  : null,
-    taskTitle  : task ? task.title.replace(/#\w+/g, '').trim() : null,
-    type       : t.type,
-    startedAt  : t.sessionStart || (Date.now() - t.elapsed * 1000),
-    endedAt    : Date.now(),
-    duration   : Math.floor(Math.max(0, t.elapsed)),
-    pauses     : t.pauses,
-    cycle      : t.cycle,
+    id: uid(),
+    taskId: task ? task.id : null,
+    taskTitle: task ? task.title.replace(/#\w+/g, '').trim() : null,
+    type: t.type,
+    startedAt: t.sessionStart || (Date.now() - t.elapsed * 1000),
+    endedAt: Date.now(),
+    duration: Math.floor(Math.max(0, t.elapsed)),
+    pauses: t.pauses,
+    cycle: t.cycle,
     totalCycles: t.totalCycles,
-    tags       : task ? (task.tags || []) : [],
+    tags: task ? (task.tags || []) : [],
   };
 
   state.sessions.unshift(session);
@@ -658,9 +658,9 @@ function updateRing(progress) {
 function updatePomStatus() {
   const t = state.timer;
   const remaining = getRemaining();
-  const progress  = getProgress();
+  const progress = getProgress();
 
-  elStatusTime.textContent  = t.active ? fmtTime(remaining) : '--:--';
+  elStatusTime.textContent = t.active ? fmtTime(remaining) : '--:--';
   elStatusPhase.textContent = t.active ? (t.type === 'study' ? 'STUDY' : 'BREAK') : 'READY';
   elStatusCycle.textContent = t.active
     ? `${t.cycle} / ${t.totalCycles}`
@@ -681,10 +681,10 @@ function updatePomControls() {
   const t = state.timer;
   const locked = t.active; // disable config when session active
 
-  elStudyMins.disabled   = locked;
-  elBreakMins.disabled   = locked;
+  elStudyMins.disabled = locked;
+  elBreakMins.disabled = locked;
   elTotalCycles.disabled = locked;
-  elAutoMode.disabled    = locked;
+  elAutoMode.disabled = locked;
 
   $$('.num-btn').forEach(btn => { btn.disabled = locked; });
 
@@ -696,15 +696,15 @@ function updatePomControls() {
 
   if (!t.active) {
     elBtnStartLbl.textContent = 'Start Session';
-    elBtnStart.style.opacity  = '';
+    elBtnStart.style.opacity = '';
     elBtnStart.querySelector('.btn-icon').textContent = '▶';
   } else if (t.running) {
     elBtnStartLbl.textContent = 'Running…';
-    elBtnStart.style.opacity  = '0.55';
+    elBtnStart.style.opacity = '0.55';
     elBtnStart.querySelector('.btn-icon').textContent = '▶';
   } else {
     elBtnStartLbl.textContent = 'Resume';
-    elBtnStart.style.opacity  = '';
+    elBtnStart.style.opacity = '';
     elBtnStart.querySelector('.btn-icon').textContent = '▶';
   }
 }
@@ -724,18 +724,18 @@ function updateNavBadge() {
 function updatePauseStats() {
   const t = state.timer;
   if (!t.active) { elPauseCard.style.display = 'none'; return; }
-  elPauseCard.style.display  = 'flex';
-  elPauseCount.textContent   = t.pauses;
+  elPauseCard.style.display = 'flex';
+  elPauseCount.textContent = t.pauses;
   elPausePhaseLbl.textContent = t.type === 'study' ? 'Study' : 'Break';
 }
 
 function updateLinkedTaskDisplay() {
-  const t    = state.timer;
+  const t = state.timer;
   const task = t.linkedTaskId ? state.tasks.find(tk => tk.id === t.linkedTaskId) : null;
 
   if (task) {
     const cleanTitle = task.title.replace(/#\w+/g, '').trim();
-    const tagsHtml   = (task.tags || [])
+    const tagsHtml = (task.tags || [])
       .map(tag => `<span class="tag-chip">#${tag}</span>`)
       .join('');
     elLinkedDisp.innerHTML = `
@@ -762,19 +762,19 @@ function showFullscreen() {
 
   const card = document.querySelector('.timer-status-card');
   const rect = card.getBoundingClientRect();
-  _morphRect  = rect; // save for reverse
+  _morphRect = rect; // save for reverse
 
   const fs = elFs;
   const ease = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
   // ── Step 1: snap to card position instantly (no transition) ──
-  fs.style.transition  = 'none';
-  fs.style.top         = rect.top  + 'px';
-  fs.style.left        = rect.left + 'px';
-  fs.style.width       = rect.width  + 'px';
-  fs.style.height      = rect.height + 'px';
+  fs.style.transition = 'none';
+  fs.style.top = rect.top + 'px';
+  fs.style.left = rect.left + 'px';
+  fs.style.width = rect.width + 'px';
+  fs.style.height = rect.height + 'px';
   fs.style.borderRadius = '16px';
-  fs.style.opacity     = '1';
+  fs.style.opacity = '1';
   fs.classList.add('fs-active');
   fs.classList.remove('content-ready');
 
@@ -790,10 +790,10 @@ function showFullscreen() {
     `border-radius ${T} ${ease}`
   ].join(', ');
 
-  fs.style.top         = '0px';
-  fs.style.left        = '0px';
-  fs.style.width       = '100vw';
-  fs.style.height      = '100vh';
+  fs.style.top = '0px';
+  fs.style.left = '0px';
+  fs.style.width = '100vw';
+  fs.style.height = '100vh';
   fs.style.borderRadius = '0px';
   fs.style.pointerEvents = 'all';
 
@@ -830,12 +830,12 @@ function hideFullscreen() {
       `opacity 180ms ease 280ms`
     ].join(', ');
 
-    fs.style.top          = rect.top    + 'px';
-    fs.style.left         = rect.left   + 'px';
-    fs.style.width        = rect.width  + 'px';
-    fs.style.height       = rect.height + 'px';
+    fs.style.top = rect.top + 'px';
+    fs.style.left = rect.left + 'px';
+    fs.style.width = rect.width + 'px';
+    fs.style.height = rect.height + 'px';
     fs.style.borderRadius = '16px';
-    fs.style.opacity      = '0';
+    fs.style.opacity = '0';
 
     // ── Step 3: clean up after animation ──
     setTimeout(() => {
@@ -846,12 +846,12 @@ function hideFullscreen() {
 }
 
 function updateFsPhase() {
-  const t     = state.timer;
+  const t = state.timer;
   const study = t.type === 'study';
 
   elFsPhase.textContent = study ? 'STUDY' : 'BREAK';
-  elFsPhase.className   = `fs-phase ${study ? 'study' : 'brk'}`;
-  elFsTime.className    = `fs-time  ${study ? 'study' : 'brk'}`;
+  elFsPhase.className = `fs-phase ${study ? 'study' : 'brk'}`;
+  elFsTime.className = `fs-time  ${study ? 'study' : 'brk'}`;
   elFsCycle.textContent = `Cycle ${t.cycle} of ${t.totalCycles}`;
 
   const task = t.linkedTaskId ? state.tasks.find(tk => tk.id === t.linkedTaskId) : null;
@@ -918,10 +918,10 @@ function renderTasks() {
 
 function buildTaskCard(task, idx) {
   const cleanTitle = task.title.replace(/#\w+/g, '').trim();
-  const isLinked   = state.timer.linkedTaskId === task.id;
+  const isLinked = state.timer.linkedTaskId === task.id;
 
   const card = document.createElement('div');
-  card.className     = `task-card ${task.completed ? 'completed' : ''}`;
+  card.className = `task-card ${task.completed ? 'completed' : ''}`;
   card.dataset.taskId = task.id;
   card.style.animationDelay = `${idx * 35}ms`;
 
@@ -955,7 +955,7 @@ function buildTaskCard(task, idx) {
 function handleTaskListClick(e) {
   const checkbox = e.target.closest('.task-checkbox');
   const actionBtn = e.target.closest('[data-action]');
-  const tagChip   = e.target.closest('.tag-chip[data-tag]');
+  const tagChip = e.target.closest('.tag-chip[data-tag]');
 
   if (checkbox) {
     toggleTaskDone(checkbox.dataset.taskId);
@@ -963,8 +963,8 @@ function handleTaskListClick(e) {
   }
   if (actionBtn) {
     const { action, taskId } = actionBtn.dataset;
-    if (action === 'link')   toggleLinkTask(taskId);
-    if (action === 'edit')   openEditTaskModal(taskId);
+    if (action === 'link') toggleLinkTask(taskId);
+    if (action === 'edit') openEditTaskModal(taskId);
     if (action === 'delete') deleteTask(taskId);
     return;
   }
@@ -1006,8 +1006,8 @@ function toggleLinkTask(taskId) {
 
 function openNewTaskModal() {
   state.editingTaskId = null;
-  elModalTitle.textContent   = 'New Task';
-  elModalSubmit.textContent  = 'Add Task';
+  elModalTitle.textContent = 'New Task';
+  elModalSubmit.textContent = 'Add Task';
   elTaskForm.reset();
   elTagPreview.innerHTML = '';
   // Default priority = medium
@@ -1019,11 +1019,11 @@ function openNewTaskModal() {
 function openEditTaskModal(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  state.editingTaskId     = taskId;
-  elModalTitle.textContent  = 'Edit Task';
+  state.editingTaskId = taskId;
+  elModalTitle.textContent = 'Edit Task';
   elModalSubmit.textContent = 'Save Changes';
-  elTaskTitle.value         = task.title;
-  elTaskDesc.value          = task.description || '';
+  elTaskTitle.value = task.title;
+  elTaskDesc.value = task.description || '';
   const radio = elTaskForm.querySelector(`input[value="${task.priority}"]`);
   if (radio) radio.checked = true;
   updateTagPreview();
@@ -1057,9 +1057,9 @@ function handleTaskFormSubmit(e) {
   if (!title) { elTaskTitle.focus(); return; }
 
   const description = elTaskDesc.value.trim();
-  const priorityEl  = elTaskForm.querySelector('input[name="priority"]:checked');
-  const priority    = priorityEl ? priorityEl.value : 'medium';
-  const tags        = [...new Set([...parseTags(title), ...parseTags(description)])];
+  const priorityEl = elTaskForm.querySelector('input[name="priority"]:checked');
+  const priority = priorityEl ? priorityEl.value : 'medium';
+  const tags = [...new Set([...parseTags(title), ...parseTags(description)])];
 
   if (state.editingTaskId) {
     const task = state.tasks.find(t => t.id === state.editingTaskId);
@@ -1087,8 +1087,8 @@ function openLinkModal() {
   } else {
     elLinkTaskList.innerHTML = available.map(task => {
       const cleanTitle = task.title.replace(/#\w+/g, '').trim();
-      const selected   = state.timer.linkedTaskId === task.id;
-      const tagsHtml   = (task.tags || []).slice(0, 4)
+      const selected = state.timer.linkedTaskId === task.id;
+      const tagsHtml = (task.tags || []).slice(0, 4)
         .map(tag => `<span class="tag-chip" style="font-size:10px">#${escHtml(tag)}</span>`)
         .join('');
       return `
@@ -1116,18 +1116,18 @@ function renderHistory() {
   const allStudy = state.sessions.filter(s => s.type === 'study');
 
   // ── Metrics ──
-  const now          = Date.now();
-  const todayMid     = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
-  const weekMid      = todayMid - 6 * 86_400_000;
+  const now = Date.now();
+  const todayMid = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const weekMid = todayMid - 6 * 86_400_000;
 
-  const todaySess    = allStudy.filter(s => s.startedAt >= todayMid);
-  const weekSess     = allStudy.filter(s => s.startedAt >= weekMid);
+  const todaySess = allStudy.filter(s => s.startedAt >= todayMid);
+  const weekSess = allStudy.filter(s => s.startedAt >= weekMid);
 
-  elMetricToday.textContent      = fmtDur(sumStudySecs(todaySess))  || '0m';
-  elMetricTodayCnt.textContent   = `${todaySess.length} session${todaySess.length !== 1 ? 's' : ''}`;
-  elMetricWeek.textContent       = fmtDur(sumStudySecs(weekSess))   || '0m';
-  elMetricWeekCnt.textContent    = `${weekSess.length} session${weekSess.length !== 1 ? 's' : ''}`;
-  elMetricAlltime.textContent    = fmtDur(sumStudySecs(allStudy))   || '0m';
+  elMetricToday.textContent = fmtDur(sumStudySecs(todaySess)) || '0m';
+  elMetricTodayCnt.textContent = `${todaySess.length} session${todaySess.length !== 1 ? 's' : ''}`;
+  elMetricWeek.textContent = fmtDur(sumStudySecs(weekSess)) || '0m';
+  elMetricWeekCnt.textContent = `${weekSess.length} session${weekSess.length !== 1 ? 's' : ''}`;
+  elMetricAlltime.textContent = fmtDur(sumStudySecs(allStudy)) || '0m';
   elMetricAlltimeCnt.textContent = `${allStudy.length} session${allStudy.length !== 1 ? 's' : ''}`;
 
   // ── Tag chips ──
@@ -1177,7 +1177,7 @@ function renderHistory() {
     const group = fmtDateGroup(session.startedAt);
     if (group !== lastGroup) {
       const div = document.createElement('div');
-      div.className   = 'date-divider';
+      div.className = 'date-divider';
       div.textContent = group;
       elSessionList.appendChild(div);
       lastGroup = group;
@@ -1221,10 +1221,10 @@ function applySettings() {
 
   elThemeDark.classList.toggle('active', s.theme === 'dark');
   elThemeLight.classList.toggle('active', s.theme === 'light');
-  elLiquidGlass.checked   = s.liquidGlass;
-  elSoundEnabled.checked  = s.sound;
-  elNotifEnabled.checked  = s.notifications;
-  elSoundPreset.value     = s.soundPreset;
+  elLiquidGlass.checked = s.liquidGlass;
+  elSoundEnabled.checked = s.sound;
+  elNotifEnabled.checked = s.notifications;
+  elSoundPreset.value = s.soundPreset;
 
   elSoundPresetRow.style.display = s.sound ? '' : 'none';
 }
@@ -1249,7 +1249,7 @@ $$('.num-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.disabled) return;
     const field = btn.dataset.field;
-    const dir   = parseInt(btn.dataset.dir, 10);
+    const dir = parseInt(btn.dataset.dir, 10);
     const input = document.getElementById(field);
     let val = parseInt(input.value, 10) + dir;
     val = Math.max(parseInt(input.min, 10), Math.min(parseInt(input.max, 10), val));
@@ -1440,25 +1440,25 @@ document.addEventListener('visibilitychange', () => {
  * plus a 900ms cooldown so rapid/accidental navigation is prevented.
  */
 function setupScrollNav() {
-  let locked        = false;   // cooldown flag
-  let accum         = 0;       // accumulated over-scroll
-  let resetTimerId  = null;    // resets accum when user pauses
+  let locked = false;   // cooldown flag
+  let accum = 0;       // accumulated over-scroll
+  let resetTimerId = null;    // resets accum when user pauses
 
   const THRESHOLD = 130;  // px of overscroll needed
-  const COOLDOWN  = 900;  // ms before next nav allowed
-  const RESET_MS  = 380;  // ms of scroll pause to reset accumulator
+  const COOLDOWN = 900;  // ms before next nav allowed
+  const RESET_MS = 380;  // ms of scroll pause to reset accumulator
 
   document.querySelectorAll('.page').forEach(page => {
     page.addEventListener('wheel', (e) => {
       if (locked) return;
 
-      const atTop    = page.scrollTop <= 2;
+      const atTop = page.scrollTop <= 2;
       const atBottom = page.scrollTop + page.clientHeight >= page.scrollHeight - 2;
-      const down     = e.deltaY > 0;
-      const up       = e.deltaY < 0;
+      const down = e.deltaY > 0;
+      const up = e.deltaY < 0;
 
       const canNavDown = down && atBottom;
-      const canNavUp   = up   && atTop;
+      const canNavUp = up && atTop;
 
       if (canNavDown || canNavUp) {
         // Accumulate overscroll delta
@@ -1469,7 +1469,7 @@ function setupScrollNav() {
         resetTimerId = setTimeout(() => { accum = 0; }, RESET_MS);
 
         if (accum >= THRESHOLD) {
-          accum  = 0;
+          accum = 0;
           locked = true;
 
           const idx = TAB_ORDER.indexOf(state.tab);
@@ -1489,17 +1489,19 @@ function setupScrollNav() {
     }, { passive: true });
   });
 }
-
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js");
+}
 function init() {
   // Apply persisted settings
   applySettings();
 
   // Restore config inputs from saved timer state
   const t = state.timer;
-  elStudyMins.value   = t.studyMinutes;
-  elBreakMins.value   = t.breakMinutes;
+  elStudyMins.value = t.studyMinutes;
+  elBreakMins.value = t.breakMinutes;
   elTotalCycles.value = t.totalCycles;
-  elAutoMode.checked  = t.autoMode;
+  elAutoMode.checked = t.autoMode;
 
   // Update all Pomodoro UI
   updatePomStatus();
