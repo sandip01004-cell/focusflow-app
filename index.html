@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark" data-glass="false">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FocusFlow — Pomodoro · Tasks · Analytics</title>
-  <meta name="description" content="A minimal, modern productivity app combining a Pomodoro timer, task management, and study analytics in one elegant interface." />
+  <meta name="description"
+    content="A minimal, modern productivity app combining a Pomodoro timer, task management, and study analytics in one elegant interface." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
 
   <!-- ═══════════════════════════════════════════════════
@@ -82,7 +86,8 @@
             <button class="btn btn-ghost btn-reset" id="btn-reset" aria-label="Reset timer">
               ↺ Reset
             </button>
-            <button class="btn btn-end-session" id="btn-end-session" aria-label="End session and save" style="display:none">
+            <button class="btn btn-end-session" id="btn-end-session" aria-label="End session and save"
+              style="display:none">
               ✓ End &amp; Save
             </button>
           </div>
@@ -93,8 +98,10 @@
           <div class="card config-card">
             <label class="config-label">Study Time</label>
             <div class="number-control">
-              <button class="num-btn" data-field="studyMinutes" data-dir="-1" aria-label="Decrease study time">−</button>
-              <input type="number" class="num-input" id="studyMinutes" value="25" min="1" max="120" aria-label="Study minutes" />
+              <button class="num-btn" data-field="studyMinutes" data-dir="-1"
+                aria-label="Decrease study time">−</button>
+              <input type="number" class="num-input" id="studyMinutes" value="25" min="1" max="120"
+                aria-label="Study minutes" />
               <button class="num-btn" data-field="studyMinutes" data-dir="1" aria-label="Increase study time">+</button>
             </div>
             <span class="config-unit">minutes</span>
@@ -103,8 +110,10 @@
           <div class="card config-card">
             <label class="config-label">Break Time</label>
             <div class="number-control">
-              <button class="num-btn" data-field="breakMinutes" data-dir="-1" aria-label="Decrease break time">−</button>
-              <input type="number" class="num-input" id="breakMinutes" value="5" min="1" max="60" aria-label="Break minutes" />
+              <button class="num-btn" data-field="breakMinutes" data-dir="-1"
+                aria-label="Decrease break time">−</button>
+              <input type="number" class="num-input" id="breakMinutes" value="5" min="1" max="60"
+                aria-label="Break minutes" />
               <button class="num-btn" data-field="breakMinutes" data-dir="1" aria-label="Increase break time">+</button>
             </div>
             <span class="config-unit">minutes</span>
@@ -114,7 +123,8 @@
             <label class="config-label">Cycles</label>
             <div class="number-control">
               <button class="num-btn" data-field="totalCycles" data-dir="-1" aria-label="Decrease cycles">−</button>
-              <input type="number" class="num-input" id="totalCycles" value="4" min="1" max="12" aria-label="Total cycles" />
+              <input type="number" class="num-input" id="totalCycles" value="4" min="1" max="12"
+                aria-label="Total cycles" />
               <button class="num-btn" data-field="totalCycles" data-dir="1" aria-label="Increase cycles">+</button>
             </div>
             <span class="config-unit">sessions</span>
@@ -190,7 +200,8 @@
           <div class="empty-state" id="todo-empty">
             <div class="empty-icon">✓</div>
             <div class="empty-title">No tasks yet</div>
-            <div class="empty-sub">Click <strong>New Task</strong> to get started. Use <span class="hash-accent">#tags</span> in titles.</div>
+            <div class="empty-sub">Click <strong>New Task</strong> to get started. Use <span
+                class="hash-accent">#tags</span> in titles.</div>
           </div>
         </div>
 
@@ -357,7 +368,8 @@
             <div class="setting-row" style="border:none;padding:0">
               <div class="setting-info">
                 <div class="setting-name">FocusFlow</div>
-                <div class="setting-desc">Pomodoro · To-Do · Analytics — v1.0<br>Data stored locally in your browser</div>
+                <div class="setting-desc">Pomodoro · To-Do · Analytics — v1.0<br>Data stored locally in your browser
+                </div>
               </div>
             </div>
           </div>
@@ -393,12 +405,14 @@
       <form class="modal-form" id="task-form" novalidate>
         <div class="form-group">
           <label class="form-label" for="task-title">Title <span class="required">*</span></label>
-          <input type="text" class="form-input" id="task-title" placeholder="What needs doing? Use #tags to categorise" required autocomplete="off" />
+          <input type="text" class="form-input" id="task-title" placeholder="What needs doing? Use #tags to categorise"
+            required autocomplete="off" />
           <div class="tag-preview" id="tag-preview"></div>
         </div>
         <div class="form-group">
           <label class="form-label" for="task-description">Description</label>
-          <textarea class="form-input form-textarea" id="task-description" placeholder="Add details or more #tags…"></textarea>
+          <textarea class="form-input form-textarea" id="task-description"
+            placeholder="Add details or more #tags…"></textarea>
         </div>
         <div class="form-group">
           <label class="form-label">Priority</label>
@@ -445,4 +459,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>
