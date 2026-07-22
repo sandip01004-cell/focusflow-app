@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-glass="false">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FocusFlow — Pomodoro · Tasks · Analytics</title>
+  <meta name="description" content="A minimal, modern productivity app combining a Pomodoro timer, task management, and study analytics in one elegant interface." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════
+       NAVIGATION
+  ════════════════════════════════════════════════════ -->
+  <nav class="nav" id="main-nav">
+    <div class="nav-brand">
+      <span class="brand-icon">◎</span>
+      <span class="brand-name">FocusFlow</span>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="pomodoro" id="tab-pomodoro">
+        <span class="tab-icon">◷</span>
+        <span class="tab-label">Pomodoro</span>
+      </button>
+      <button class="nav-tab" data-tab="todo" id="tab-todo">
+        <span class="tab-icon">✓</span>
+        <span class="tab-label">To-Do</span>
+      </button>
+      <button class="nav-tab" data-tab="history" id="tab-history">
+        <span class="tab-icon">◈</span>
+        <span class="tab-label">History</span>
+      </button>
+      <button class="nav-tab" data-tab="settings" id="tab-settings">
+        <span class="tab-icon">⊕</span>
+        <span class="tab-label">Settings</span>
+      </button>
+    </div>
+
+    <div class="nav-session-info" id="nav-session-info">
+      <span class="session-badge" id="session-badge">●</span>
+      <span id="session-nav-label">Studying</span>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════
+       PAGES CONTAINER
+  ════════════════════════════════════════════════════ -->
+  <div class="pages-container" id="pages-container">
+
+    <!-- ─────────────── POMODORO PAGE ─────────────── -->
+    <section class="page page-active" id="page-pomodoro">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title pomodoro-title">Pomodoro</h1>
+          <p class="page-subtitle">Deep work, one session at a time</p>
+        </div>
+
+        <!-- Timer Status Ring -->
+        <div class="card timer-status-card" id="timer-status-card">
+          <div class="status-glow" id="status-glow"></div>
+          <div class="status-ring-container">
+            <svg class="status-ring" viewBox="0 0 120 120" id="status-ring-svg">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-progress" cx="60" cy="60" r="52" id="ring-progress" />
+            </svg>
+            <div class="status-center">
+              <div class="status-phase" id="status-phase">READY</div>
+              <div class="status-time" id="status-time">--:--</div>
+              <div class="status-cycle" id="status-cycle">― / ―</div>
+            </div>
+          </div>
+          <div class="timer-controls-bar">
+            <button class="btn btn-pomodoro-start" id="btn-start" aria-label="Start session">
+              <span class="btn-icon">▶</span>
+              <span id="btn-start-label">Start Session</span>
+            </button>
+            <button class="btn btn-ghost btn-reset" id="btn-reset" aria-label="Reset timer">
+              ↺ Reset
+            </button>
+            <button class="btn btn-end-session" id="btn-end-session" aria-label="End session and save" style="display:none">
+              ✓ End &amp; Save
+            </button>
+          </div>
+        </div>
+
+        <!-- Config Grid -->
+        <div class="config-grid">
+          <div class="card config-card">
+            <label class="config-label">Study Time</label>
+            <div class="number-control">
+              <button class="num-btn" data-field="studyMinutes" data-dir="-1" aria-label="Decrease study time">−</button>
+              <input type="number" class="num-input" id="studyMinutes" value="25" min="1" max="120" aria-label="Study minutes" />
+              <button class="num-btn" data-field="studyMinutes" data-dir="1" aria-label="Increase study time">+</button>
+            </div>
+            <span class="config-unit">minutes</span>
+          </div>
+
+          <div class="card config-card">
+            <label class="config-label">Break Time</label>
+            <div class="number-control">
+              <button class="num-btn" data-field="breakMinutes" data-dir="-1" aria-label="Decrease break time">−</button>
+              <input type="number" class="num-input" id="breakMinutes" value="5" min="1" max="60" aria-label="Break minutes" />
+              <button class="num-btn" data-field="breakMinutes" data-dir="1" aria-label="Increase break time">+</button>
+            </div>
+            <span class="config-unit">minutes</span>
+          </div>
+
+          <div class="card config-card">
+            <label class="config-label">Cycles</label>
+            <div class="number-control">
+              <button class="num-btn" data-field="totalCycles" data-dir="-1" aria-label="Decrease cycles">−</button>
+              <input type="number" class="num-input" id="totalCycles" value="4" min="1" max="12" aria-label="Total cycles" />
+              <button class="num-btn" data-field="totalCycles" data-dir="1" aria-label="Increase cycles">+</button>
+            </div>
+            <span class="config-unit">sessions</span>
+          </div>
+
+          <div class="card config-card auto-card">
+            <label class="config-label">Auto Mode</label>
+            <label class="toggle-switch" aria-label="Toggle auto mode">
+              <input type="checkbox" id="autoMode" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="config-unit">cycle automatically</span>
+          </div>
+        </div>
+
+        <!-- Linked Task -->
+        <div class="card linked-task-card">
+          <div class="linked-task-header">
+            <span class="section-label">Linked Task</span>
+            <button class="btn btn-tiny" id="btn-link-task" aria-label="Link a task">Choose Task</button>
+          </div>
+          <div id="linked-task-display">
+            <span class="no-task-text">No task linked — sessions will be saved as unnamed</span>
+          </div>
+        </div>
+
+        <!-- Pause stats (shown when session active) -->
+        <div class="card pause-stats-card" id="pause-stats-card" style="display:none">
+          <div class="pause-stat">
+            <span class="pause-stat-label">Pauses this session</span>
+            <span class="pause-stat-value" id="pause-count">0</span>
+          </div>
+          <div class="pause-stat">
+            <span class="pause-stat-label">Phase</span>
+            <span class="pause-stat-value" id="pause-phase-label">Study</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────── TO-DO PAGE ─────────────── -->
+    <section class="page" id="page-todo">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title todo-title">To-Do</h1>
+          <p class="page-subtitle">Tasks, priorities, and <span class="hash-accent">#tags</span></p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="todo-toolbar">
+          <button class="btn btn-todo-add" id="btn-add-task" aria-label="Add new task">+ New Task</button>
+          <div class="filter-chips" id="tag-filter-chips">
+            <button class="filter-chip chip-todo active" data-filter="all">All</button>
+          </div>
+          <div class="filter-options">
+            <select class="select-filter" id="priority-filter" aria-label="Filter by priority">
+              <option value="all">All Priorities</option>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <label class="show-done-label">
+              <input type="checkbox" id="show-completed" /> Show done
+            </label>
+          </div>
+        </div>
+
+        <!-- Task List -->
+        <div class="task-list" id="task-list">
+          <div class="empty-state" id="todo-empty">
+            <div class="empty-icon">✓</div>
+            <div class="empty-title">No tasks yet</div>
+            <div class="empty-sub">Click <strong>New Task</strong> to get started. Use <span class="hash-accent">#tags</span> in titles.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────── HISTORY PAGE ─────────────── -->
+    <section class="page" id="page-history">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title history-title">History</h1>
+          <p class="page-subtitle">Your study record</p>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="metrics-row">
+          <div class="card metric-card">
+            <div class="metric-label">Today</div>
+            <div class="metric-value" id="metric-today">0m</div>
+            <div class="metric-sub" id="metric-today-count">0 sessions</div>
+          </div>
+          <div class="card metric-card">
+            <div class="metric-label">This Week</div>
+            <div class="metric-value" id="metric-week">0m</div>
+            <div class="metric-sub" id="metric-week-count">0 sessions</div>
+          </div>
+          <div class="card metric-card">
+            <div class="metric-label">All Time</div>
+            <div class="metric-value" id="metric-alltime">0m</div>
+            <div class="metric-sub" id="metric-alltime-count">0 sessions</div>
+          </div>
+        </div>
+
+        <!-- Tag Filter + Totals -->
+        <div class="history-filter-row">
+          <div class="filter-chips" id="history-tag-chips">
+            <button class="filter-chip chip-history active" data-htag="all">All</button>
+          </div>
+        </div>
+
+        <div id="tag-totals-section" class="card tag-totals-section" style="display:none">
+          <div class="section-label">Time by Tag</div>
+          <div id="tag-totals-list" class="tag-totals-list"></div>
+        </div>
+
+        <!-- Session List -->
+        <div class="session-list" id="session-list">
+          <div class="empty-state" id="history-empty">
+            <div class="empty-icon">◈</div>
+            <div class="empty-title">No sessions yet</div>
+            <div class="empty-sub">Complete a Pomodoro session to see your history here</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────── SETTINGS PAGE ─────────────── -->
+    <section class="page" id="page-settings">
+      <div class="page-content">
+
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Customize your experience</p>
+        </div>
+
+        <div class="settings-sections">
+
+          <!-- Appearance -->
+          <div class="card settings-card">
+            <div class="settings-section-title">Appearance</div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Theme</div>
+                <div class="setting-desc">Switch between dark and light modes</div>
+              </div>
+              <div class="theme-toggle-group">
+                <button class="theme-btn active" id="theme-dark" data-theme="dark">Dark</button>
+                <button class="theme-btn" id="theme-light" data-theme="light">Light</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Liquid Glass</div>
+                <div class="setting-desc">Frosted glass effect on cards</div>
+              </div>
+              <label class="toggle-switch" aria-label="Toggle liquid glass">
+                <input type="checkbox" id="liquidGlass" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Sound & Notifications -->
+          <div class="card settings-card">
+            <div class="settings-section-title">Sound &amp; Notifications</div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Sound</div>
+                <div class="setting-desc">Play a chime when a session ends</div>
+              </div>
+              <label class="toggle-switch" aria-label="Toggle sound">
+                <input type="checkbox" id="soundEnabled" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-row" id="sound-preset-row">
+              <div class="setting-info">
+                <div class="setting-name">Sound Preset</div>
+                <div class="setting-desc">Choose your completion sound</div>
+              </div>
+              <div class="sound-controls">
+                <select class="select-filter" id="soundPreset" aria-label="Sound preset">
+                  <option value="bell">Bell Chime</option>
+                  <option value="soft">Soft Tone</option>
+                  <option value="deep">Deep Gong</option>
+                  <option value="ding">Bright Ding</option>
+                </select>
+                <button class="btn btn-tiny" id="btn-test-sound">Test ▶</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Notifications</div>
+                <div class="setting-desc">Browser notifications on session end</div>
+              </div>
+              <label class="toggle-switch" aria-label="Toggle notifications">
+                <input type="checkbox" id="notificationsEnabled" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Data -->
+          <div class="card settings-card">
+            <div class="settings-section-title">Data</div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Clear History</div>
+                <div class="setting-desc">Delete all session history</div>
+              </div>
+              <button class="btn btn-danger" id="btn-clear-history">Clear</button>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Reset Everything</div>
+                <div class="setting-desc">Delete all tasks, history, and settings</div>
+              </div>
+              <button class="btn btn-danger" id="btn-clear-all">Reset</button>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="card settings-card">
+            <div class="settings-section-title">About</div>
+            <div class="setting-row" style="border:none;padding:0">
+              <div class="setting-info">
+                <div class="setting-name">FocusFlow</div>
+                <div class="setting-desc">Pomodoro · To-Do · Analytics — v1.0<br>Data stored locally in your browser</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </div><!-- end .pages-container -->
+
+  <!-- ═══════════════════════════════════════════════════
+       FULLSCREEN TIMER OVERLAY
+  ════════════════════════════════════════════════════ -->
+  <div class="fullscreen-timer" id="fullscreen-timer" role="timer" aria-live="polite">
+    <div class="fs-content">
+      <div class="fs-phase" id="fs-phase">STUDY</div>
+      <div class="fs-cycle" id="fs-cycle">Cycle 1 of 4</div>
+      <div class="fs-time" id="fs-time">25:00</div>
+      <div class="fs-task" id="fs-task"></div>
+      <div class="fs-hint">tap anywhere to pause</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       TASK MODAL
+  ════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal" id="task-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">New Task</h2>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">✕</button>
+      </div>
+      <form class="modal-form" id="task-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="task-title">Title <span class="required">*</span></label>
+          <input type="text" class="form-input" id="task-title" placeholder="What needs doing? Use #tags to categorise" required autocomplete="off" />
+          <div class="tag-preview" id="tag-preview"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="task-description">Description</label>
+          <textarea class="form-input form-textarea" id="task-description" placeholder="Add details or more #tags…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <div class="priority-options">
+            <label class="priority-option" data-priority="low">
+              <input type="radio" name="priority" value="low" /> Low
+            </label>
+            <label class="priority-option" data-priority="medium">
+              <input type="radio" name="priority" value="medium" checked /> Medium
+            </label>
+            <label class="priority-option" data-priority="high">
+              <input type="radio" name="priority" value="high" /> High
+            </label>
+            <label class="priority-option" data-priority="urgent">
+              <input type="radio" name="priority" value="urgent" /> Urgent
+            </label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-todo-add" id="modal-submit">Add Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       LINK TASK MODAL
+  ════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="link-modal-backdrop" role="dialog" aria-modal="true" aria-label="Link a task">
+    <div class="modal" id="link-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Link a Task to This Session</h2>
+        <button class="modal-close" id="link-modal-close" aria-label="Close">✕</button>
+      </div>
+      <p class="modal-hint">Sessions linked to a task will be tagged in History.</p>
+      <div class="link-task-list" id="link-task-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-unlink-task">Remove Link</button>
+        <button class="btn btn-ghost" id="link-modal-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
