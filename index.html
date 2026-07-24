@@ -376,8 +376,10 @@
                 </div>
                 <div class="music-file-controls">
                   <label class="btn btn-tiny music-file-label" for="music-file-input">Choose File</label>
-                  <input type="file" id="music-file-input" accept="audio/*" style="display:none" aria-label="Choose audio file" />
-                  <button class="btn btn-tiny btn-music-clear" id="btn-clear-music" title="Remove track" style="display:none">✕</button>
+                  <input type="file" id="music-file-input" accept="audio/*" style="display:none"
+                    aria-label="Choose audio file" />
+                  <button class="btn btn-tiny btn-music-clear" id="btn-clear-music" title="Remove track"
+                    style="display:none">✕</button>
                 </div>
               </div>
 
@@ -398,7 +400,8 @@
                 </div>
                 <div class="music-volume-wrap">
                   <span class="music-vol-icon">♪</span>
-                  <input type="range" class="music-volume-slider" id="musicVolume" min="0" max="100" value="50" aria-label="Music volume" />
+                  <input type="range" class="music-volume-slider" id="musicVolume" min="0" max="100" value="50"
+                    aria-label="Music volume" />
                   <span class="music-vol-pct" id="music-vol-pct">50%</span>
                 </div>
               </div>
@@ -595,9 +598,17 @@
 
   <style>
     @keyframes slideUpBanner {
-      from { transform: translateY(20px); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
+
     /* On desktop (no bottom nav) push banner higher */
     @media (min-width: 641px) {
       #pwa-install-banner {
@@ -632,7 +643,7 @@
       // iOS Safari — show a manual hint (no native prompt available)
       const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
       const isInStandalone = window.matchMedia('(display-mode: standalone)').matches
-                          || navigator.standalone === true;
+        || navigator.standalone === true;
 
       if (isIos && !isInStandalone) {
         // Swap button text for iOS

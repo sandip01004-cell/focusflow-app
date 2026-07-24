@@ -277,6 +277,7 @@ function notify(title, body) {
 
 /** Called on Start / Resume */
 function startTimer() {
+  music.start();
   const t = state.timer;
 
   if (!t.active) {
@@ -306,6 +307,7 @@ function startTimer() {
 
 /** Hard reset — clears session */
 function resetTimer() {
+  music.pause();
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
   // Preserve config values
@@ -1134,6 +1136,200 @@ function init() {
   // Scroll-based page navigation
   setupScrollNav();
 
+// ────────────────────────────────────────────────────────────
+// INDEXEDDB — MUSIC FILE STORAGE
+// ────────────────────────────────────────────────────────────
+const idbMusic = {
+  dbName: 'ff_music_db',
+  storeName: 'music_files',
+  async init() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.dbName, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+  async saveBlob(blob, name) {
+    const db = await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      tx.objectStore(this.storeName).put({ blob, name }, 'current_track');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  },
+  async loadBlob() {
+    const db = await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readonly');
+      const req = tx.objectStore(this.storeName).get('current_track');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+  async clear() {
+    const db = await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      tx.objectStore(this.storeName).delete('current_track');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
+// MUSIC ENGINE
+// ────────────────────────────────────────────────────────────
+const music = {
+  audio: new Audio(),
+  url: null,
+  name: null,
+
+  async init() {
+    const data = await idbMusic.loadBlob();
+    if (data && data.blob) {
+      this.name = data.name;
+      this.url = URL.createObjectURL(data.blob);
+      this.audio.src = this.url;
+      this.audio.loop = true;
+      this.audio.volume = (state.settings.musicVolume || 50) / 100;
+      this.updateUI();
+    } else {
+      this.clearUI();
+    }
+  },
+
+  async setFile(file) {
+    if (!file) return;
+    this.name = file.name;
+    this.url = URL.createObjectURL(file);
+    this.audio.src = this.url;
+    this.audio.loop = true;
+    this.audio.volume = (state.settings.musicVolume || 50) / 100;
+    
+    await idbMusic.saveBlob(file, file.name);
+    this.updateUI();
+  },
+
+  async clear() {
+    this.audio.pause();
+    if (this.url) URL.revokeObjectURL(this.url);
+    this.url = null;
+    this.name = null;
+    this.audio.src = '';
+    await idbMusic.clear();
+    this.clearUI();
+  },
+
+  updateUI() {
+    const fName = document.getElementById('music-file-name');
+    const npName = document.getElementById('music-now-playing-name');
+    const fsTrack = document.getElementById('fs-music-track');
+    const btnClear = document.getElementById('btn-clear-music');
+    const npRow = document.getElementById('music-now-playing-row');
+    const fsBar = document.getElementById('fs-music-bar');
+    if (fName) fName.textContent = this.name;
+    if (npName) npName.textContent = this.name;
+    if (fsTrack) fsTrack.textContent = this.name;
+    if (btnClear) btnClear.style.display = 'flex';
+    if (npRow) npRow.style.display = 'flex';
+    if (fsBar) fsBar.style.display = 'flex';
+  },
+
+  clearUI() {
+    const fName = document.getElementById('music-file-name');
+    const btnClear = document.getElementById('btn-clear-music');
+    const npRow = document.getElementById('music-now-playing-row');
+    const fsBar = document.getElementById('fs-music-bar');
+    if (fName) fName.textContent = 'No file chosen';
+    if (btnClear) btnClear.style.display = 'none';
+    if (npRow) npRow.style.display = 'none';
+    if (fsBar) fsBar.style.display = 'none';
+  },
+
+  start() {
+    if (!state.settings.musicEnabled || !this.url) return;
+    const playDuring = state.settings.musicPlayDuring || 'study';
+    if (playDuring === 'study' && state.timer.phase !== 'STUDY') {
+      this.pause();
+      return;
+    }
+    this.audio.play().catch(e => console.warn('Music play blocked:', e));
+  },
+
+  pause() {
+    this.audio.pause();
+  },
+
+  stop() {
+    this.pause();
+  },
+
+  setVolume(pct) {
+    this.audio.volume = pct / 100;
+    state.settings.musicVolume = pct;
+    persist();
+  }
+};
+
+  // Bind Music UI Events
+  const chkMusic = document.getElementById('musicEnabled');
+  const fileMusic = document.getElementById('music-file-input');
+  const btnClearMusic = document.getElementById('btn-clear-music');
+  const volMusic = document.getElementById('musicVolume');
+  const txtVolMusic = document.getElementById('music-vol-pct');
+  const selMusicPhase = document.getElementById('musicPlayDuring');
+
+  if (chkMusic) {
+    chkMusic.checked = !!state.settings.musicEnabled;
+    chkMusic.addEventListener('change', (e) => {
+      state.settings.musicEnabled = e.target.checked;
+      persist();
+      if (!state.settings.musicEnabled) music.pause();
+      else if (state.timer.active) music.start();
+    });
+  }
+
+  if (fileMusic) {
+    fileMusic.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        music.setFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (btnClearMusic) {
+    btnClearMusic.addEventListener('click', () => {
+      music.clear();
+      if (fileMusic) fileMusic.value = '';
+    });
+  }
+
+  if (volMusic) {
+    volMusic.value = state.settings.musicVolume || 50;
+    if (txtVolMusic) txtVolMusic.textContent = volMusic.value + '%';
+    volMusic.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (txtVolMusic) txtVolMusic.textContent = val + '%';
+      music.setVolume(val);
+    });
+  }
+
+  if (selMusicPhase) {
+    selMusicPhase.value = state.settings.musicPlayDuring || 'study';
+    selMusicPhase.addEventListener('change', (e) => {
+      state.settings.musicPlayDuring = e.target.value;
+      persist();
+      if (state.timer.active) music.start();
+    });
+  }
 
   // Load saved music track from IndexedDB
   music.init();

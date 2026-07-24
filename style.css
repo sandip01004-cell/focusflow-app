@@ -121,8 +121,14 @@
 
 html {
   height: 100%;
-  /* dvh = dynamic viewport height: excludes browser chrome on mobile,
-     falls back to vh on older browsers */
+  background: var(--bg);
+  transition: background 300ms;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text1);
   height: 100dvh;
   overflow: hidden;
   transition: background 300ms, color 300ms;
@@ -2530,3 +2536,33 @@ body.touch-device .task-actions {
   }
 
 }
+/* ─────────────────────────────────────────────────
+   MUSIC CONTROLS
+───────────────────────────────────────────────── */
+.music-file-name { font-family: monospace; font-size: 11px; color: var(--accent); background: rgba(224,92,92,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; word-break: break-all; }
+.music-file-controls { display: flex; align-items: center; gap: 8px; }
+.btn-music-clear { width: 32px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.music-volume-wrap { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 200px; }
+.music-vol-icon { font-size: 16px; color: var(--text2); }
+.music-volume-slider { flex: 1; accent-color: var(--accent); }
+.music-vol-pct { font-size: 12px; color: var(--text2); min-width: 3ch; }
+.music-now-playing { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 8px 12px; border-radius: var(--r-sm); margin-top: 8px; }
+.music-now-playing-name { font-size: 12px; color: var(--text1); }
+.music-eq-mini { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+.music-eq-bar { width: 3px; background: var(--accent); border-radius: 1px; animation: eq-bounce 1s infinite alternate ease-in-out; }
+.music-eq-bar:nth-child(1) { height: 4px; animation-delay: 0s; }
+.music-eq-bar:nth-child(2) { height: 8px; animation-delay: 0.2s; }
+.music-eq-bar:nth-child(3) { height: 6px; animation-delay: 0.4s; }
+
+@keyframes eq-bounce { 0% { height: 3px; } 100% { height: 12px; } }
+
+.fs-music-bar { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.7; }
+.fs-music-track { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); }
+.fs-eq { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
+.fs-eq-b { width: 4px; background: var(--accent); border-radius: 2px; animation: eq-bounce-fs 1s infinite alternate ease-in-out; }
+.fs-eq-b:nth-child(1) { height: 6px; animation-delay: 0s; }
+.fs-eq-b:nth-child(2) { height: 12px; animation-delay: 0.3s; }
+.fs-eq-b:nth-child(3) { height: 8px; animation-delay: 0.1s; }
+.fs-eq-b:nth-child(4) { height: 16px; animation-delay: 0.4s; }
+
+@keyframes eq-bounce-fs { 0% { height: 4px; } 100% { height: 16px; } }
