@@ -967,6 +967,12 @@ let _fsTouchLock = null;
 function showFullscreen() {
   updateFsPhase();
 
+  // Attempt to enter true fullscreen mode
+  if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.warn('Fullscreen request failed:', err);
+    });
+  }
   const card = document.querySelector('.timer-status-card');
   const rect = card.getBoundingClientRect();
   _morphRect = rect; // save for reverse
@@ -1017,7 +1023,14 @@ function showFullscreen() {
 function hideFullscreen() {
   const fs = elFs;
 
-  // ── Step 1: fade out text content first ──
+  // Attempt to exit true fullscreen mode
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(err => {
+      console.warn('Exit fullscreen failed:', err);
+    });
+  }
+
+  // 1️⃣ Step 1: fade out text content first 1️⃣──
   fs.classList.remove('content-ready');
   fs.style.pointerEvents = 'none';
 
