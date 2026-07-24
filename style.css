@@ -1777,3 +1777,828 @@ button {
   white-space: nowrap;
   border: 0;
 }
+
+/* ================================================================
+   RESPONSIVE DESIGN — TABLET & MOBILE
+   ================================================================
+
+   Breakpoints:
+   • Desktop  : > 900px  — current spacious layout, no changes
+   • Tablet   : 641–900px — reduced padding, 2-col config grid
+   • Mobile   : ≤ 640px  — bottom nav, touch-sized controls
+
+   All changes are purely additive. Zero desktop styles are altered.
+   ================================================================ */
+
+/* ─────────────────────────────────────────────────
+   RESPONSIVE TOKENS
+───────────────────────────────────────────────── */
+:root {
+  --bottom-nav-h: 68px;
+}
+
+/* Hide mobile-only labels on desktop/tablet */
+.tab-mobile-label {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────
+   TABLET  (641px – 900px)
+───────────────────────────────────────────────── */
+@media (max-width: 900px) {
+
+  .page-content {
+    max-width: 680px;
+    padding: 32px 24px 60px;
+  }
+
+  /* Config grid: 4-col → 2×2 */
+  .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Metrics row: keep 3-col but tighter */
+  .metric-card {
+    padding: 16px 12px;
+  }
+
+  .metric-value {
+    font-size: 22px;
+  }
+
+  /* Modal: a bit wider */
+  .modal {
+    width: min(500px, 94vw);
+  }
+
+  /* Nav: reduce tab padding slightly */
+  .nav-tab {
+    padding: 6px 14px;
+  }
+
+}
+
+/* ─────────────────────────────────────────────────
+   MOBILE  (≤ 640px)
+───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* ── Body: enable safe-area insets for notched phones ── */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Page container: shrink top nav, expand bottom for bottom bar ── */
+  .pages-container {
+    bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  }
+
+  /* ── Page content: tight mobile padding ── */
+  .page-content {
+    max-width: 100%;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  /* ── Page header: smaller on mobile ── */
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  /* ─── MOBILE NAV — TOP BAR becomes minimal, TABS move to bottom ─── */
+
+  /* Shrink top bar height */
+  :root {
+    --nav-h: 52px;
+  }
+
+  .nav {
+    padding: 0 16px;
+    height: var(--nav-h);
+    justify-content: space-between;
+  }
+
+  /* Brand: keep icon + name, but smaller */
+  .brand-name {
+    font-size: 13px;
+  }
+
+  /* Hide the nav-tabs from the top bar on mobile */
+  .nav-tabs {
+    /* Remove from top bar flow */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--nav-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    z-index: 800;
+    display: flex;
+    gap: 0;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding-top: 8px;
+    flex: none; /* override desktop flex:1 */
+  }
+
+  /* Each bottom nav button: vertical stack of icon + label */
+  .nav-tab {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 12px 4px;
+    border-radius: var(--r-sm);
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    font-size: 10px;
+  }
+
+  /* Hide the desktop long label on mobile */
+  .tab-label {
+    display: none;
+  }
+
+  /* Show the short mobile label */
+  .tab-mobile-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: inherit;
+    line-height: 1;
+  }
+
+  /* Larger icon in bottom nav */
+  .tab-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Active state: accent underline + colored icon */
+  .nav-tab.active {
+    background: transparent;
+  }
+
+  #tab-pomodoro.active {
+    color: var(--accent-pom);
+  }
+
+  #tab-todo.active {
+    color: var(--accent-todo);
+  }
+
+  #tab-history.active {
+    color: var(--accent-hist);
+  }
+
+  #tab-settings.active {
+    color: var(--text1);
+  }
+
+  /* Session info badge: move to top bar right side on mobile */
+  .nav-session-info {
+    font-size: 11px;
+  }
+
+  /* ─── POMODORO PAGE — MOBILE ─── */
+
+  .timer-status-card {
+    padding: 28px 20px 24px;
+    gap: 22px;
+  }
+
+  /* Bigger ring on mobile */
+  .status-ring-container {
+    width: 200px;
+    height: 200px;
+  }
+
+  /* Larger time display inside ring */
+  .status-time {
+    font-size: clamp(36px, 10vw, 44px);
+  }
+
+  .status-phase {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+  }
+
+  .status-cycle {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  /* Timer controls: full-width, larger buttons */
+  .timer-controls-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .btn-pomodoro-start {
+    flex: 1;
+    min-width: 140px;
+    padding: 14px 20px;
+    font-size: 15px;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  .btn-reset,
+  .btn-end-session {
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+
+  /* Config grid: 2×2 on mobile */
+  .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .config-card {
+    padding: 16px 12px 14px;
+    gap: 8px;
+  }
+
+  .config-label {
+    font-size: 9px;
+  }
+
+  /* Larger +/- buttons for touch */
+  .num-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    border-radius: 8px;
+  }
+
+  .num-input {
+    font-size: 28px;
+    width: 52px;
+  }
+
+  /* Linked task card */
+  .linked-task-card {
+    padding: 14px 16px;
+  }
+
+  /* Pause stats */
+  .pause-stats-card {
+    gap: 24px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  /* ─── TO-DO PAGE — MOBILE ─── */
+
+  /* Toolbar: stacked column layout */
+  .todo-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .btn-todo-add {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .filter-chips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-chip {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 14px;
+    min-height: 34px;
+  }
+
+  .filter-options {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .select-filter {
+    min-height: 36px;
+    font-size: 13px;
+    padding: 6px 10px;
+    flex: 1;
+  }
+
+  .show-done-label {
+    font-size: 13px;
+    min-height: 36px;
+    align-items: center;
+  }
+
+  /* Task cards: touch-optimized */
+  .task-card {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
+  /* Larger checkbox */
+  .task-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+
+  .task-checkbox.checked::after {
+    font-size: 13px;
+  }
+
+  /* Task actions: ALWAYS VISIBLE on mobile (no hover needed) */
+  .task-actions {
+    opacity: 1;
+    flex-direction: row;
+    gap: 6px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* Larger touch targets for action buttons */
+  .task-action-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .task-title {
+    font-size: 15px;
+  }
+
+  .task-description {
+    font-size: 13px;
+  }
+
+  /* ─── HISTORY PAGE — MOBILE ─── */
+
+  /* Metrics row: keep 3-col but compact */
+  .metrics-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .metric-card {
+    padding: 14px 8px;
+    text-align: center;
+  }
+
+  .metric-label {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  .metric-sub {
+    font-size: 10px;
+  }
+
+  /* History filter chips: horizontal scroll */
+  .history-filter-row {
+    margin-bottom: 12px;
+  }
+
+  #history-tag-chips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #history-tag-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Session rows: stack info vertically on very small screens */
+  .session-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 14px;
+    align-items: flex-start;
+  }
+
+  .session-timestamp {
+    width: auto;
+    flex-shrink: 0;
+    font-size: 11px;
+    order: 2;
+    color: var(--text3);
+  }
+
+  .session-info {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  .session-task-name {
+    font-size: 14px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .session-meta {
+    font-size: 11px;
+    margin-top: 3px;
+  }
+
+  .session-dur {
+    order: 3;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .session-pauses {
+    order: 4;
+    font-size: 11px;
+  }
+
+  .date-divider {
+    padding: 16px 0 6px;
+    font-size: 10px;
+  }
+
+  /* Tag totals */
+  .tag-totals-section {
+    padding: 14px 16px;
+  }
+
+  .tag-totals-list {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  /* ─── SETTINGS PAGE — MOBILE ─── */
+
+  .settings-card {
+    padding: 18px 16px 14px;
+  }
+
+  .setting-row {
+    gap: 12px;
+    padding: 14px 0;
+    flex-wrap: wrap;
+  }
+
+  .setting-name {
+    font-size: 15px;
+  }
+
+  .setting-desc {
+    font-size: 13px;
+  }
+
+  /* Theme toggle group: larger touch targets */
+  .theme-btn {
+    padding: 8px 22px;
+    font-size: 14px;
+    min-height: 40px;
+  }
+
+  /* Toggle switch: slightly larger */
+  .toggle-switch {
+    width: 48px;
+    height: 28px;
+  }
+
+  .toggle-slider::after {
+    width: 20px;
+    height: 20px;
+    top: 3px;
+    left: 3px;
+  }
+
+  .toggle-switch input:checked + .toggle-slider::after {
+    transform: translateX(20px);
+  }
+
+  /* Sound controls: stack on small screens */
+  .sound-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .sound-controls .select-filter {
+    width: 100%;
+  }
+
+  .sound-controls .btn-tiny {
+    align-self: flex-start;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 38px;
+  }
+
+  /* Danger buttons: larger */
+  .btn-danger {
+    min-height: 44px;
+    padding: 10px 24px;
+    font-size: 14px;
+  }
+
+  /* ─── MODALS — MOBILE SLIDE-UP ─── */
+
+  /* Backdrop: align to bottom */
+  .modal-backdrop {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  /* Modal slides up from bottom */
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    margin: 0;
+  }
+
+  .modal-backdrop.open .modal {
+    transform: translateY(0);
+  }
+
+  /* Modal handle indicator */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border-med);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  /* Form inputs: min 16px font to prevent iOS auto-zoom */
+  .form-input {
+    font-size: 16px;
+    padding: 12px 14px;
+    min-height: 46px;
+  }
+
+  .form-textarea {
+    height: 90px;
+    font-size: 16px;
+  }
+
+  .form-label {
+    font-size: 12px;
+  }
+
+  /* Priority options: 2×2 grid on very small screens */
+  .priority-options {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .priority-option {
+    min-width: calc(50% - 4px);
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  /* Link task modal list items: larger touch targets */
+  .link-task-item {
+    padding: 14px 14px;
+    min-height: 52px;
+  }
+
+  .link-task-item-title {
+    font-size: 14px;
+  }
+
+  .link-task-list {
+    max-height: 50vh;
+  }
+
+  /* ─── FULLSCREEN TIMER — MOBILE TUNING ─── */
+
+  /* Tune the clamp for portrait phone screens */
+  .fs-time {
+    font-size: clamp(80px, 22vw, 160px);
+    letter-spacing: -0.05em;
+  }
+
+  .fs-cycle {
+    margin-bottom: 28px;
+    font-size: 11px;
+  }
+
+  .fs-phase {
+    font-size: 10px;
+    letter-spacing: 0.30em;
+  }
+
+  .fs-task {
+    font-size: 13px;
+    margin-top: 24px;
+    max-width: 90vw;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .fs-hint {
+    font-size: 11px;
+    margin-top: 36px;
+    letter-spacing: 0.14em;
+  }
+
+  /* ─── SCROLL IMPROVEMENTS — MOBILE ─── */
+
+  .page {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Prevent scroll bleed on fullscreen timer */
+  .fullscreen-timer.fs-active {
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  /* ─── MISC TOUCH IMPROVEMENTS ─── */
+
+  /* Larger close button in modals */
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  /* Section label chips taller */
+  .tag-chip {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  /* Btn-tiny: minimum tap target */
+  .btn-tiny {
+    padding: 7px 14px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  /* Bigger choose-task button */
+  #btn-link-task {
+    min-height: 36px;
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+
+  /* Empty state: smaller padding */
+  .empty-state {
+    padding: 44px 20px;
+  }
+
+}
+
+/* ─────────────────────────────────────────────────
+   TOUCH DEVICE — always-visible task actions
+   (applied via JS body class)
+───────────────────────────────────────────────── */
+body.touch-device .task-actions {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────
+   VERY SMALL SCREENS  (≤ 380px)
+───────────────────────────────────────────────── */
+@media (max-width: 380px) {
+
+  .status-ring-container {
+    width: 172px;
+    height: 172px;
+  }
+
+  .fs-time {
+    font-size: clamp(72px, 24vw, 120px);
+  }
+
+  .config-card {
+    padding: 12px 10px 10px;
+  }
+
+  .num-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .num-input {
+    font-size: 24px;
+    width: 46px;
+  }
+
+  .metrics-row {
+    gap: 6px;
+  }
+
+  .metric-value {
+    font-size: 16px;
+  }
+
+}
+
+/* ─────────────────────────────────────────────────
+   LANDSCAPE PHONE  (height ≤ 500px)
+───────────────────────────────────────────────── */
+@media (max-height: 500px) and (max-width: 900px) {
+
+  /* Compact timer card in landscape */
+  .timer-status-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 20px;
+  }
+
+  .status-ring-container {
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+  }
+
+  .timer-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .config-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* Fullscreen: smaller font in landscape */
+  .fs-time {
+    font-size: clamp(60px, 16vh, 130px);
+  }
+
+  .fs-cycle {
+    margin-bottom: 16px;
+  }
+
+  .fs-task {
+    margin-top: 12px;
+  }
+
+  .fs-hint {
+    margin-top: 20px;
+  }
+
+}

@@ -247,6 +247,25 @@ const elLinkModalCancel = $('#link-modal-cancel');
 const elBtnUnlink = $('#btn-unlink-task');
 
 // ────────────────────────────────────────────────────────────
+// TOUCH DEVICE DETECTION
+// ────────────────────────────────────────────────────────────
+
+/**
+ * Detect touch-capable devices and add a body class so CSS can
+ * make task action buttons always-visible (no hover on touch).
+ */
+(function detectTouch() {
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    document.body.classList.add('touch-device');
+  }
+  // Also add class on first actual touch (catches hybrid devices)
+  window.addEventListener('touchstart', function onFirstTouch() {
+    document.body.classList.add('touch-device');
+    window.removeEventListener('touchstart', onFirstTouch, { passive: true });
+  }, { passive: true });
+})();
+
+// ────────────────────────────────────────────────────────────
 // AUDIO ENGINE
 // ────────────────────────────────────────────────────────────
 
@@ -756,6 +775,8 @@ function updateLinkedTaskDisplay() {
 
 // Stored card rect at the moment morph started (used for reverse morph)
 let _morphRect = null;
+// iOS touchmove lock handler reference
+let _fsTouchLock = null;
 
 function showFullscreen() {
   updateFsPhase();
@@ -801,6 +822,10 @@ function showFullscreen() {
   setTimeout(() => { fs.classList.add('content-ready'); }, 540);
 
   document.body.style.overflow = 'hidden';
+
+  // Prevent iOS rubber-band scroll through the fullscreen overlay
+  _fsTouchLock = (e) => e.preventDefault();
+  fs.addEventListener('touchmove', _fsTouchLock, { passive: false });
 }
 
 function hideFullscreen() {
@@ -841,6 +866,11 @@ function hideFullscreen() {
     setTimeout(() => {
       fs.classList.remove('fs-active');
       document.body.style.overflow = '';
+      // Remove iOS touchmove lock
+      if (_fsTouchLock) {
+        fs.removeEventListener('touchmove', _fsTouchLock, { passive: false });
+        _fsTouchLock = null;
+      }
     }, 480);
   }, 180); // wait for fs-content opacity out (300ms transition, start morph at 180ms)
 }
