@@ -121,13 +121,9 @@
 
 html {
   height: 100%;
-}
-
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text1);
-  height: 100vh;
+  /* dvh = dynamic viewport height: excludes browser chrome on mobile,
+     falls back to vh on older browsers */
+  height: 100dvh;
   overflow: hidden;
   transition: background 300ms, color 300ms;
   -webkit-font-smoothing: antialiased;
@@ -1778,75 +1774,7 @@ button {
   border: 0;
 }
 
-/* ================================================================
-   RESPONSIVE DESIGN — TABLET & MOBILE
-   ================================================================
 
-   Breakpoints:
-   • Desktop  : > 900px  — current spacious layout, no changes
-   • Tablet   : 641–900px — reduced padding, 2-col config grid
-   • Mobile   : ≤ 640px  — bottom nav, touch-sized controls
-
-   All changes are purely additive. Zero desktop styles are altered.
-   ================================================================ */
-
-/* ─────────────────────────────────────────────────
-   RESPONSIVE TOKENS
-───────────────────────────────────────────────── */
-:root {
-  --bottom-nav-h: 68px;
-}
-
-/* Hide mobile-only labels on desktop/tablet */
-.tab-mobile-label {
-  display: none;
-}
-
-/* ─────────────────────────────────────────────────
-   TABLET  (641px – 900px)
-───────────────────────────────────────────────── */
-@media (max-width: 900px) {
-
-  .page-content {
-    max-width: 680px;
-    padding: 32px 24px 60px;
-  }
-
-  /* Config grid: 4-col → 2×2 */
-  .config-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Metrics row: keep 3-col but tighter */
-  .metric-card {
-    padding: 16px 12px;
-  }
-
-  .metric-value {
-    font-size: 22px;
-  }
-
-  /* Modal: a bit wider */
-  .modal {
-    width: min(500px, 94vw);
-  }
-
-  /* Nav: reduce tab padding slightly */
-  .nav-tab {
-    padding: 6px 14px;
-  }
-
-}
-
-/* ─────────────────────────────────────────────────
-   MOBILE  (≤ 640px)
-───────────────────────────────────────────────── */
-@media (max-width: 640px) {
-
-  /* ── Body: enable safe-area insets for notched phones ── */
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
 
   /* ── Page container: shrink top nav, expand bottom for bottom bar ── */
   .pages-container {

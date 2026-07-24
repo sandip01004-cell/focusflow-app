@@ -352,6 +352,71 @@
             </div>
           </div>
 
+
+          <!-- Background Music -->
+          <div class="card settings-card">
+            <div class="settings-section-title">Background Music</div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Enable Music</div>
+                <div class="setting-desc">Play a track during Pomodoro sessions</div>
+              </div>
+              <label class="toggle-switch" aria-label="Toggle background music">
+                <input type="checkbox" id="musicEnabled" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div id="music-detail-rows">
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Track</div>
+                  <div class="setting-desc music-file-name" id="music-file-name">No file chosen</div>
+                </div>
+                <div class="music-file-controls">
+                  <label class="btn btn-tiny music-file-label" for="music-file-input">Choose File</label>
+                  <input type="file" id="music-file-input" accept="audio/*" style="display:none" aria-label="Choose audio file" />
+                  <button class="btn btn-tiny btn-music-clear" id="btn-clear-music" title="Remove track" style="display:none">✕</button>
+                </div>
+              </div>
+
+              <div class="setting-row music-now-playing-row" id="music-now-playing-row" style="display:none">
+                <div class="music-now-playing">
+                  <span class="music-eq-mini">
+                    <span class="music-eq-bar"></span>
+                    <span class="music-eq-bar"></span>
+                    <span class="music-eq-bar"></span>
+                  </span>
+                  <span class="music-now-playing-name" id="music-now-playing-name"></span>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Volume</div>
+                </div>
+                <div class="music-volume-wrap">
+                  <span class="music-vol-icon">♪</span>
+                  <input type="range" class="music-volume-slider" id="musicVolume" min="0" max="100" value="50" aria-label="Music volume" />
+                  <span class="music-vol-pct" id="music-vol-pct">50%</span>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Play During</div>
+                  <div class="setting-desc">Which phases get music</div>
+                </div>
+                <select class="select-filter" id="musicPlayDuring" aria-label="When to play music">
+                  <option value="study">Study only</option>
+                  <option value="both">Study &amp; Break</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+
           <!-- Data -->
           <div class="card settings-card">
             <div class="settings-section-title">Data</div>
@@ -400,6 +465,17 @@
       <div class="fs-cycle" id="fs-cycle">Cycle 1 of 4</div>
       <div class="fs-time" id="fs-time">25:00</div>
       <div class="fs-task" id="fs-task"></div>
+
+      <div class="fs-music-bar" id="fs-music-bar">
+        <span class="fs-eq">
+          <span class="fs-eq-b"></span>
+          <span class="fs-eq-b"></span>
+          <span class="fs-eq-b"></span>
+          <span class="fs-eq-b"></span>
+        </span>
+        <span class="fs-music-track" id="fs-music-track"></span>
+      </div>
+
       <div class="fs-hint">tap anywhere to pause</div>
     </div>
   </div>
