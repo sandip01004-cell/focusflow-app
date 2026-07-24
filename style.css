@@ -121,6 +121,7 @@
 
 html {
   height: 100%;
+  /* Fill safe-area gaps (notch/navbar) with the app background */
   background: var(--bg);
   transition: background 300ms;
 }
@@ -129,6 +130,8 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text1);
+  /* dvh = dynamic viewport height: excludes browser chrome on mobile,
+     falls back to vh on older browsers */
   height: 100dvh;
   overflow: hidden;
   transition: background 300ms, color 300ms;
@@ -1780,6 +1783,309 @@ button {
   border: 0;
 }
 
+/* ─────────────────────────────────────────────────
+   ■■■ BACKGROUND MUSIC ■■■
+───────────────────────────────────────────────── */
+
+/* File picker label acts as a button */
+.music-file-label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all var(--ease-fast);
+}
+
+.music-file-label:hover {
+  background: var(--card-hover);
+  color: var(--text1);
+}
+
+/* Clear track button */
+.btn-music-clear {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.btn-music-clear:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* File name display */
+.music-file-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* File controls: label + clear button */
+.music-file-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Now-playing strip inside settings */
+.music-now-playing-row {
+  padding: 8px 0 !important;
+}
+
+.music-now-playing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mini EQ animation (settings card) */
+.music-eq-mini {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.music-eq-bar {
+  width: 3px;
+  background: var(--accent-pom);
+  border-radius: 2px;
+  animation: eq-bounce 0.7s ease-in-out infinite;
+}
+
+.music-eq-bar:nth-child(1) { height: 6px;  animation-delay: 0s;    }
+.music-eq-bar:nth-child(2) { height: 10px; animation-delay: 0.15s; }
+.music-eq-bar:nth-child(3) { height: 4px;  animation-delay: 0.30s; }
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(1);   }
+  50%       { transform: scaleY(0.3); }
+}
+
+/* Paused state: freeze the bars */
+.music-eq-mini.paused .music-eq-bar {
+  animation-play-state: paused;
+}
+
+.music-now-playing-name {
+  font-size: 12px;
+  color: var(--accent-pom);
+  font-weight: 500;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Volume slider */
+.music-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.music-vol-icon {
+  font-size: 14px;
+  color: var(--text3);
+  line-height: 1;
+}
+
+.music-vol-pct {
+  font-size: 11px;
+  color: var(--text2);
+  width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.music-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 110px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-med);
+  outline: none;
+  cursor: pointer;
+}
+
+.music-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-pom);
+  cursor: pointer;
+  transition: transform var(--ease-fast), box-shadow var(--ease-fast);
+  box-shadow: 0 0 0 0 var(--accent-pom-dim);
+}
+
+.music-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 6px var(--accent-pom-dim);
+}
+
+.music-volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-pom);
+  cursor: pointer;
+  border: none;
+}
+
+/* ── Fullscreen timer music bar ── */
+.fs-music-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.fs-music-bar.visible {
+  display: flex;
+  opacity: 1;
+}
+
+/* Fullscreen EQ bars */
+.fs-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.fs-eq-b {
+  width: 3px;
+  background: rgba(224, 92, 92, 0.55);
+  border-radius: 2px;
+  animation: eq-bounce 0.7s ease-in-out infinite;
+}
+
+.fs-eq-b:nth-child(1) { height: 8px;  animation-delay: 0s;    }
+.fs-eq-b:nth-child(2) { height: 14px; animation-delay: 0.12s; }
+.fs-eq-b:nth-child(3) { height: 6px;  animation-delay: 0.24s; }
+.fs-eq-b:nth-child(4) { height: 11px; animation-delay: 0.36s; }
+
+/* Paused fullscreen bars */
+.fs-music-bar.paused .fs-eq-b {
+  animation-play-state: paused;
+}
+
+.fs-music-track {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.06em;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 640px) {
+  .music-volume-slider {
+    width: 100%;
+    height: 6px;
+  }
+
+  .music-volume-slider::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .music-volume-wrap {
+    width: 100%;
+    flex: 1;
+  }
+
+  .music-file-name {
+    max-width: 140px;
+  }
+
+  .music-file-controls {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .music-vol-pct {
+    width: 38px;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE DESIGN — TABLET & MOBILE
+   ================================================================
+
+   Breakpoints:
+   • Desktop  : > 900px  — current spacious layout, no changes
+   • Tablet   : 641–900px — reduced padding, 2-col config grid
+   • Mobile   : ≤ 640px  — bottom nav, touch-sized controls
+
+   All changes are purely additive. Zero desktop styles are altered.
+   ================================================================ */
+
+/* ─────────────────────────────────────────────────
+   RESPONSIVE TOKENS
+───────────────────────────────────────────────── */
+:root {
+  --bottom-nav-h: 68px;
+}
+
+/* Hide mobile-only labels on desktop/tablet */
+.tab-mobile-label {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────
+   TABLET  (641px – 900px)
+───────────────────────────────────────────────── */
+@media (max-width: 900px) {
+
+  .page-content {
+    max-width: 680px;
+    padding: 32px 24px 60px;
+  }
+
+  /* Config grid: 4-col → 2×2 */
+  .config-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Metrics row: keep 3-col but tighter */
+  .metric-card {
+    padding: 16px 12px;
+  }
+
+  .metric-value {
+    font-size: 22px;
+  }
+
+  /* Modal: a bit wider */
+  .modal {
+    width: min(500px, 94vw);
+  }
+
+  /* Nav: reduce tab padding slightly */
+  .nav-tab {
+    padding: 6px 14px;
+  }
+
+}
+
+/* ─────────────────────────────────────────────────
+   MOBILE  (≤ 640px)
+───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+
 
 
   /* ── Page container: shrink top nav, expand bottom for bottom bar ── */
@@ -2536,33 +2842,3 @@ body.touch-device .task-actions {
   }
 
 }
-/* ─────────────────────────────────────────────────
-   MUSIC CONTROLS
-───────────────────────────────────────────────── */
-.music-file-name { font-family: monospace; font-size: 11px; color: var(--accent); background: rgba(224,92,92,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; word-break: break-all; }
-.music-file-controls { display: flex; align-items: center; gap: 8px; }
-.btn-music-clear { width: 32px; padding: 0; display: flex; align-items: center; justify-content: center; }
-.music-volume-wrap { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 200px; }
-.music-vol-icon { font-size: 16px; color: var(--text2); }
-.music-volume-slider { flex: 1; accent-color: var(--accent); }
-.music-vol-pct { font-size: 12px; color: var(--text2); min-width: 3ch; }
-.music-now-playing { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 8px 12px; border-radius: var(--r-sm); margin-top: 8px; }
-.music-now-playing-name { font-size: 12px; color: var(--text1); }
-.music-eq-mini { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
-.music-eq-bar { width: 3px; background: var(--accent); border-radius: 1px; animation: eq-bounce 1s infinite alternate ease-in-out; }
-.music-eq-bar:nth-child(1) { height: 4px; animation-delay: 0s; }
-.music-eq-bar:nth-child(2) { height: 8px; animation-delay: 0.2s; }
-.music-eq-bar:nth-child(3) { height: 6px; animation-delay: 0.4s; }
-
-@keyframes eq-bounce { 0% { height: 3px; } 100% { height: 12px; } }
-
-.fs-music-bar { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0.7; }
-.fs-music-track { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); }
-.fs-eq { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
-.fs-eq-b { width: 4px; background: var(--accent); border-radius: 2px; animation: eq-bounce-fs 1s infinite alternate ease-in-out; }
-.fs-eq-b:nth-child(1) { height: 6px; animation-delay: 0s; }
-.fs-eq-b:nth-child(2) { height: 12px; animation-delay: 0.3s; }
-.fs-eq-b:nth-child(3) { height: 8px; animation-delay: 0.1s; }
-.fs-eq-b:nth-child(4) { height: 16px; animation-delay: 0.4s; }
-
-@keyframes eq-bounce-fs { 0% { height: 4px; } 100% { height: 16px; } }

@@ -31,6 +31,130 @@ function persist(key, val) {
 }
 
 // ────────────────────────────────────────────────────────────
+// INDEXEDDB — MUSIC FILE STORAGE
+// ────────────────────────────────────────────────────────────
+
+const IDB_NAME = 'ff_music_db';
+const IDB_STORE = 'tracks';
+
+function openMusicDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = (e) => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveMusicBlob(file) {
+  const db = await openMusicDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(file, 'current');
+    tx.oncomplete = () => { resolve(); db.close(); };
+    tx.onerror = () => { reject(tx.error); db.close(); };
+  });
+}
+
+async function getMusicBlob() {
+  const db = await openMusicDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get('current');
+    req.onsuccess = () => { resolve(req.result); db.close(); };
+    req.onerror = () => { reject(req.error); db.close(); };
+  });
+}
+
+async function deleteMusicBlob() {
+  const db = await openMusicDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete('current');
+    tx.oncomplete = () => { resolve(); db.close(); };
+    tx.onerror = () => { reject(tx.error); db.close(); };
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// UTILITY FUNCTIONS
+// ────────────────────────────────────────────────────────────
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/** Parse #tag tokens from a string. Returns unique lowercase array. */
+function parseTags(text) {
+  const raw = (text || '').match(/#([a-zA-Z]\w*)/g) || [];
+  return [...new Set(raw.map(t => t.slice(1).toLowerCase()))];
+}
+
+/** Format total seconds → "25m", "1h 5m", "45s" */
+function fmtDur(secs) {
+  secs = Math.max(0, Math.floor(secs));
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  if (m > 0 && s > 0) return `${m}m ${s}s`;
+  if (m > 0) return `${m}m`;
+  return `${s}s`;
+}
+
+/** Format remaining seconds → "MM:SS" */
+function fmtTime(secs) {
+  secs = Math.max(0, Math.ceil(secs));
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** Format a timestamp for History rows */
+function fmtTimestamp(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayMid = todayMid - 86_400_000;
+  const sessionMid = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  if (sessionMid === todayMid) return timeStr;
+  if (sessionMid === yesterdayMid) return `Yesterday · ${timeStr}`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' + timeStr;
+}
+
+/** Format a date for History group dividers */
+function fmtDateGroup(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayMid = todayMid - 86_400_000;
+  const sessionMid = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+  if (sessionMid === todayMid) return 'Today';
+  if (sessionMid === yesterdayMid) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+/** Sum study seconds from an array of session objects */
+function sumStudySecs(sessions) {
+  return sessions
+    .filter(s => s.type === 'study')
+    .reduce((acc, s) => acc + (s.duration || 0), 0);
+}
+
+// ────────────────────────────────────────────────────────────
+// DEFAULT STATE
+// ────────────────────────────────────────────────────────────
+
+const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  liquidGlass: false,
+  sound: true,
+  soundPreset: 'bell',
+  notifications: true,
   musicEnabled: false,
   musicVolume: 50,
   musicPlayDuring: 'study',
@@ -271,13 +395,232 @@ function notify(title, body) {
 }
 
 // ────────────────────────────────────────────────────────────
+// MUSIC ENGINE
+// ────────────────────────────────────────────────────────────
+
+const music = {
+  audio: null,
+  objectUrl: null,
+
+  /** Load saved track from IndexedDB on startup */
+  async init() {
+    try {
+      const blob = await getMusicBlob();
+      if (blob) this._attachBlob(blob);
+    } catch (e) { /* no saved track — silent fail */ }
+    updateMusicUI();
+  },
+
+  /** Wire up a File/Blob to the audio element */
+  _attachBlob(blob) {
+    this._cleanup();
+    this.objectUrl = URL.createObjectURL(blob);
+    this.audio = new Audio(this.objectUrl);
+    this.audio.loop = true;
+    this.audio.volume = (state.settings.musicVolume ?? 50) / 100;
+    // Forward audio events so UI stays in sync
+    this.audio.addEventListener('play',  () => updateFsMusicBar());
+    this.audio.addEventListener('pause', () => updateFsMusicBar());
+  },
+
+  /** User chose a new file — persist it and load it */
+  async setFile(file) {
+    this._attachBlob(file);
+    await saveMusicBlob(file);
+    state.settings.musicFileName = file.name;
+    persist(STORE.SETTINGS, state.settings);
+    updateMusicUI();
+  },
+
+  /** Remove the track entirely */
+  async clear() {
+    this._cleanup();
+    await deleteMusicBlob();
+    state.settings.musicFileName = null;
+    persist(STORE.SETTINGS, state.settings);
+    updateMusicUI();
+  },
+
+  play() {
+    if (!state.settings.musicEnabled || !this.audio) return;
+    this.audio.play().catch(() => {});
+  },
+
+  pause() {
+    if (!this.audio) return;
+    this.audio.pause();
+  },
+
+  stop() {
+    if (!this.audio) return;
+    this.audio.pause();
+    this.audio.currentTime = 0;
+  },
+
+  setVolume(v) {
+    if (!this.audio) return;
+    this.audio.volume = Math.max(0, Math.min(1, v / 100));
+  },
+
+  isPlaying() {
+    return !!(this.audio && !this.audio.paused);
+  },
+
+  _cleanup() {
+    if (this.audio) { this.audio.pause(); this.audio = null; }
+    if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; }
+  },
+};
+
+/** Sync the music settings card UI to current state */
+function updateMusicUI() {
+  const s = state.settings;
+  const hasFile = !!s.musicFileName;
+  const isPlaying = music.isPlaying();
+
+  const elEnabled   = $('#musicEnabled');
+  const elFileName  = $('#music-file-name');
+  const elClearBtn  = $('#btn-clear-music');
+  const elVolume    = $('#musicVolume');
+  const elVolPct    = $('#music-vol-pct');
+  const elPlayDuring = $('#musicPlayDuring');
+  const elDetailRows = $('#music-detail-rows');
+  const elNowRow    = $('#music-now-playing-row');
+  const elNowName   = $('#music-now-playing-name');
+  const elEqMini    = document.querySelector('.music-eq-mini');
+
+  if (elEnabled)    elEnabled.checked = s.musicEnabled;
+  if (elDetailRows) elDetailRows.style.display = s.musicEnabled ? '' : 'none';
+  if (elFileName)   elFileName.textContent = hasFile ? s.musicFileName : 'No file chosen';
+  if (elClearBtn)   elClearBtn.style.display = hasFile ? '' : 'none';
+  if (elVolume)     elVolume.value = s.musicVolume ?? 50;
+  if (elVolPct)     elVolPct.textContent = `${s.musicVolume ?? 50}%`;
+  if (elPlayDuring) elPlayDuring.value = s.musicPlayDuring || 'study';
+
+  // Now-playing strip
+  if (elNowRow)  elNowRow.style.display  = (hasFile && s.musicEnabled) ? '' : 'none';
+  if (elNowName) elNowName.textContent   = s.musicFileName || '';
+  if (elEqMini)  elEqMini.classList.toggle('paused', !isPlaying);
+}
+
+/** Sync the fullscreen music bar visibility and state */
+function updateFsMusicBar() {
+  const bar   = $('#fs-music-bar');
+  const track = $('#fs-music-track');
+  if (!bar) return;
+
+  const show = music.isPlaying() && state.settings.musicEnabled && state.settings.musicFileName;
+  bar.classList.toggle('visible', !!show);
+  bar.classList.toggle('paused', !music.isPlaying());
+  if (track) track.textContent = state.settings.musicFileName || '';
+
+  // Keep settings card mini-EQ in sync too
+  const elEqMini = document.querySelector('.music-eq-mini');
+  if (elEqMini) elEqMini.classList.toggle('paused', !music.isPlaying());
+}
+
+// ────────────────────────────────────────────────────────────
+// NAVIGATION
+// ────────────────────────────────────────────────────────────
+
+function navigate(to) {
+  if (to === state.tab) return;
+
+  const fromIdx = TAB_ORDER.indexOf(state.tab);
+  const toIdx = TAB_ORDER.indexOf(to);
+  const forward = toIdx > fromIdx;
+
+  const fromEl = document.getElementById(`page-${state.tab}`);
+  const toEl = document.getElementById(`page-${to}`);
+
+  // Position incoming page without transition
+  toEl.style.transition = 'none';
+  toEl.classList.remove('page-active', 'page-above');
+  if (!forward) toEl.classList.add('page-above'); // start above for backward nav
+
+  void toEl.offsetHeight; // force reflow
+
+  toEl.style.transition = ''; // re-enable transition
+
+  // Animate outgoing
+  fromEl.classList.remove('page-active');
+  if (forward) fromEl.classList.add('page-above'); // slide outgoing upward
+
+  // Animate incoming
+  toEl.classList.remove('page-above');
+  toEl.classList.add('page-active');
+
+  state.tab = to;
+
+  // Update nav highlights
+  navTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === to));
+
+  // Trigger page-specific renders
+  if (to === 'history') renderHistory();
+  if (to === 'todo') renderTasks();
+}
+
+// ────────────────────────────────────────────────────────────
+// ■■■ TIMER ENGINE ■■■
+// ────────────────────────────────────────────────────────────
+
+let rafId = null;
+
+/** Compute remaining seconds based on timestamps (works after sleep) */
+function getRemaining() {
+  const t = state.timer;
+  let elapsed = t.elapsed;
+  if (t.running && t.startTs) elapsed += (Date.now() - t.startTs) / 1000;
+  return Math.max(0, t.targetSecs - elapsed);
+}
+
+/** Compute 0→1 progress fraction */
+function getProgress() {
+  const t = state.timer;
+  let elapsed = t.elapsed;
+  if (t.running && t.startTs) elapsed += (Date.now() - t.startTs) / 1000;
+  return Math.min(1, elapsed / t.targetSecs);
+}
+
+/**
+ * End the current session early but count it as completed.
+ * Saves the elapsed portion to history, then resets the timer cleanly.
+ */
+function endSession() {
+  const t = state.timer;
+  if (!t.active) return;
+
+  // Only save study sessions (not breaks) to history
+  if (t.type === 'study' && t.elapsed > 0) {
+    saveSession(t);
+    playSound();
+    notify('FocusFlow', `Session saved — ${fmtDur(t.elapsed)} logged. ✅`);
+  }
+
+  // Full reset keeping config
+  const prev = state.timer;
+  state.timer = {
+    ...DEFAULT_TIMER,
+    studyMinutes: prev.studyMinutes,
+    breakMinutes: prev.breakMinutes,
+    totalCycles: prev.totalCycles,
+    autoMode: prev.autoMode,
+    linkedTaskId: prev.linkedTaskId,
+    targetSecs: prev.studyMinutes * 60,
+  };
+
+  persist(STORE.TIMER, state.timer);
+  hideFullscreen();
+  updatePomStatus();
+  updatePomControls();
+  updateNavBadge();
+  elPauseCard.style.display = 'none';
   music.stop();
 }
 
 
 /** Called on Start / Resume */
 function startTimer() {
-  music.start();
   const t = state.timer;
 
   if (!t.active) {
@@ -302,12 +645,34 @@ function startTimer() {
   updateNavBadge();
   updatePomControls();
   updatePauseStats();
+  // Start music on study phase
+  if (state.timer.type === 'study') music.play();
+}
+
+/** Tap-to-pause — called when user clicks fullscreen */
+function pauseTimer() {
+  const t = state.timer;
+  if (!t.running) return;
+
+  if (t.startTs) t.elapsed += (Date.now() - t.startTs) / 1000;
+  t.running = false;
+  t.startTs = null;
+  t.pauses++;
+
+  persist(STORE.TIMER, t);
+
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+
+  hideFullscreen();
+  updatePomStatus();
+  updatePomControls();
+  updateNavBadge();
+  updatePauseStats();
   music.pause();
 }
 
 /** Hard reset — clears session */
 function resetTimer() {
-  music.pause();
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
   // Preserve config values
@@ -329,6 +694,90 @@ function resetTimer() {
   updatePomControls();
   updateNavBadge();
   elPauseCard.style.display = 'none';
+  music.stop();
+}
+
+/** RAF tick — timestamp-based, accurate after sleep */
+function tick() {
+  if (!state.timer.running) return;
+
+  const remaining = getRemaining();
+  const progress = getProgress();
+
+  // Update fullscreen display
+  elFsTime.textContent = fmtTime(remaining);
+
+  // Update ring & status card (visible when FS is hidden after pause)
+  updateRing(progress);
+  elStatusTime.textContent = fmtTime(remaining);
+
+  if (remaining <= 0) {
+    onSegmentComplete();
+    return;
+  }
+
+  rafId = requestAnimationFrame(tick);
+}
+
+/** Segment (study or break) has finished */
+function onSegmentComplete() {
+  const t = state.timer;
+
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+
+  // Finalize elapsed
+  if (t.startTs) t.elapsed += (Date.now() - t.startTs) / 1000;
+  t.running = false;
+  t.startTs = null;
+
+  // Save study session to history
+  if (t.type === 'study') saveSession(t);
+
+  // Flash fullscreen
+  flashFullscreen();
+
+  // Play sound + notify
+  playSound();
+
+  if (t.type === 'study') {
+    notify('FocusFlow', `Study session ${t.cycle}/${t.totalCycles} complete! Take a break. 🎉`);
+
+    if (t.autoMode) {
+      const isLast = t.cycle >= t.totalCycles;
+      if (isLast) {
+        notify('FocusFlow', 'All cycles complete — great work! 🏆');
+        setTimeout(() => finishAllCycles(), 1400);
+      } else {
+        setTimeout(() => beginBreak(), 700);
+      }
+    } else {
+      setTimeout(() => finishSession(), 800);
+    }
+  } else {
+    // Break finished
+    notify('FocusFlow', 'Break over — time to focus! ▶');
+    if (t.autoMode) {
+      t.cycle++;
+      setTimeout(() => beginNextStudy(), 700);
+    } else {
+      setTimeout(() => finishSession(), 800);
+    }
+  }
+}
+
+function beginBreak() {
+  const t = state.timer;
+  t.type = 'break';
+  t.elapsed = 0;
+  t.targetSecs = t.breakMinutes * 60;
+  t.running = true;
+  t.startTs = Date.now();
+  t.pauses = 0;
+  t.sessionStart = Date.now();
+
+  persist(STORE.TIMER, t);
+  updateFsPhase();
+  tick();
   // Pause or continue music depending on user preference
   if (state.settings.musicPlayDuring === 'both') music.play();
   else music.pause();
@@ -347,6 +796,28 @@ function beginNextStudy() {
   persist(STORE.TIMER, t);
   updateFsPhase();
   tick();
+  // Resume music for study phase
+  music.play();
+}
+
+function finishSession() {
+  const prev = state.timer;
+  state.timer = {
+    ...DEFAULT_TIMER,
+    studyMinutes: prev.studyMinutes,
+    breakMinutes: prev.breakMinutes,
+    totalCycles: prev.totalCycles,
+    autoMode: prev.autoMode,
+    linkedTaskId: prev.linkedTaskId,
+    targetSecs: prev.studyMinutes * 60,
+  };
+
+  persist(STORE.TIMER, state.timer);
+  hideFullscreen();
+  updatePomStatus();
+  updatePomControls();
+  updateNavBadge();
+  elPauseCard.style.display = 'none';
   music.stop();
 }
 
@@ -972,6 +1443,175 @@ function applySettings() {
   elSoundPreset.value = s.soundPreset;
 
   elSoundPresetRow.style.display = s.sound ? '' : 'none';
+
+  // Music
+  updateMusicUI();
+}
+
+function saveSetting(key, val) {
+  state.settings[key] = val;
+  persist(STORE.SETTINGS, state.settings);
+  applySettings();
+}
+
+// ────────────────────────────────────────────────────────────
+// EVENT LISTENERS
+// ────────────────────────────────────────────────────────────
+
+// ── Navigation ──
+navTabs.forEach(tab => {
+  tab.addEventListener('click', () => navigate(tab.dataset.tab));
+});
+
+// ── Pomodoro: number controls ──
+$$('.num-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    const field = btn.dataset.field;
+    const dir = parseInt(btn.dataset.dir, 10);
+    const input = document.getElementById(field);
+    let val = parseInt(input.value, 10) + dir;
+    val = Math.max(parseInt(input.min, 10), Math.min(parseInt(input.max, 10), val));
+    input.value = val;
+    state.timer[field] = val;
+    if (field === 'studyMinutes' && !state.timer.active) {
+      state.timer.targetSecs = val * 60;
+    }
+    persist(STORE.TIMER, state.timer);
+    updatePomStatus();
+  });
+});
+
+// ── Number inputs direct edit ──
+[elStudyMins, elBreakMins, elTotalCycles].forEach(input => {
+  input.addEventListener('change', () => {
+    let val = Math.max(parseInt(input.min, 10), Math.min(parseInt(input.max, 10), parseInt(input.value, 10) || 1));
+    input.value = val;
+    state.timer[input.id] = val;
+    if (input.id === 'studyMinutes' && !state.timer.active) {
+      state.timer.targetSecs = val * 60;
+    }
+    persist(STORE.TIMER, state.timer);
+    updatePomStatus();
+  });
+});
+
+// ── Auto mode ──
+elAutoMode.addEventListener('change', () => {
+  state.timer.autoMode = elAutoMode.checked;
+  persist(STORE.TIMER, state.timer);
+});
+
+// ── Start / Resume ──
+elBtnStart.addEventListener('click', () => {
+  getAudio(); // init AudioContext on user gesture
+  if (state.timer.running) { showFullscreen(); return; }
+  if (state.settings.notifications) requestNotifPermission();
+  startTimer();
+});
+
+// ── Reset ──
+elBtnReset.addEventListener('click', () => {
+  if (state.timer.active && !window.confirm('Reset the current session?')) return;
+  resetTimer();
+});
+
+// ── End & Save: mark paused session as completed ──
+elBtnEndSession.addEventListener('click', () => { endSession(); });
+
+// ── Fullscreen: tap to pause ──
+elFs.addEventListener('click', () => pauseTimer());
+
+// ── Link task button ──
+elBtnLinkTask.addEventListener('click', openLinkModal);
+
+// ── Task list: delegated clicks ──
+elTaskList.addEventListener('click', handleTaskListClick);
+
+// ── Keyboard: checkbox enter/space ──
+elTaskList.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-checkbox')) {
+    e.preventDefault();
+    toggleTaskDone(e.target.dataset.taskId);
+  }
+});
+
+// ── Add task button ──
+elBtnAddTask.addEventListener('click', openNewTaskModal);
+
+// ── Task modal close ──
+elModalClose.addEventListener('click', closeModal);
+elModalCancel.addEventListener('click', closeModal);
+elModalBackdrop.addEventListener('click', e => { if (e.target === elModalBackdrop) closeModal(); });
+
+// ── Task form submit ──
+elTaskForm.addEventListener('submit', handleTaskFormSubmit);
+
+// ── Live tag preview ──
+elTaskTitle.addEventListener('input', updateTagPreview);
+elTaskDesc.addEventListener('input', updateTagPreview);
+
+// ── Tag filter chips (todo) ──
+elTagFilterChips.addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (chip) { state.todoTagFilter = chip.dataset.filter; renderTasks(); }
+});
+
+// ── Priority filter ──
+elPriorityFilter.addEventListener('change', () => {
+  state.todoPriorityFilter = elPriorityFilter.value;
+  renderTasks();
+});
+
+// ── Show completed toggle ──
+elShowCompleted.addEventListener('change', () => {
+  state.showCompleted = elShowCompleted.checked;
+  renderTasks();
+});
+
+// ── History tag chips ──
+elHistTagChips.addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (chip) { state.histTagFilter = chip.dataset.htag; renderHistory(); }
+});
+
+// ── Link modal ──
+elLinkModalClose.addEventListener('click', closeLinkModal);
+elLinkModalCancel.addEventListener('click', closeLinkModal);
+elLinkBackdrop.addEventListener('click', e => { if (e.target === elLinkBackdrop) closeLinkModal(); });
+
+elBtnUnlink.addEventListener('click', () => {
+  state.timer.linkedTaskId = null;
+  persist(STORE.TIMER, state.timer);
+  updateLinkedTaskDisplay();
+  renderTasks();
+  closeLinkModal();
+});
+
+elLinkTaskList.addEventListener('click', e => {
+  const item = e.target.closest('.link-task-item');
+  if (!item) return;
+  const taskId = item.dataset.taskId;
+  state.timer.linkedTaskId = state.timer.linkedTaskId === taskId ? null : taskId;
+  persist(STORE.TIMER, state.timer);
+  updateLinkedTaskDisplay();
+  renderTasks();
+  closeLinkModal();
+});
+
+// ── Settings ──
+elThemeDark.addEventListener('click', () => saveSetting('theme', 'dark'));
+elThemeLight.addEventListener('click', () => saveSetting('theme', 'light'));
+elLiquidGlass.addEventListener('change', () => saveSetting('liquidGlass', elLiquidGlass.checked));
+elSoundEnabled.addEventListener('change', () => saveSetting('sound', elSoundEnabled.checked));
+elNotifEnabled.addEventListener('change', () => saveSetting('notifications', elNotifEnabled.checked));
+elSoundPreset.addEventListener('change', () => saveSetting('soundPreset', elSoundPreset.value));
+
+elBtnTestSound.addEventListener('click', () => {
+  getAudio();
+  playSound(elSoundPreset.value);
+});
+
 // ── Background Music settings ──
 $('#musicEnabled').addEventListener('change', (e) => {
   state.settings.musicEnabled = e.target.checked;
@@ -1136,204 +1776,8 @@ function init() {
   // Scroll-based page navigation
   setupScrollNav();
 
-// ────────────────────────────────────────────────────────────
-// INDEXEDDB — MUSIC FILE STORAGE
-// ────────────────────────────────────────────────────────────
-const idbMusic = {
-  dbName: 'ff_music_db',
-  storeName: 'music_files',
-  async init() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(this.dbName, 1);
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName);
-        }
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  },
-  async saveBlob(blob, name) {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, 'readwrite');
-      tx.objectStore(this.storeName).put({ blob, name }, 'current_track');
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  },
-  async loadBlob() {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, 'readonly');
-      const req = tx.objectStore(this.storeName).get('current_track');
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  },
-  async clear() {
-    const db = await this.init();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, 'readwrite');
-      tx.objectStore(this.storeName).delete('current_track');
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-};
-
-// ────────────────────────────────────────────────────────────
-// MUSIC ENGINE
-// ────────────────────────────────────────────────────────────
-const music = {
-  audio: new Audio(),
-  url: null,
-  name: null,
-
-  async init() {
-    const data = await idbMusic.loadBlob();
-    if (data && data.blob) {
-      this.name = data.name;
-      this.url = URL.createObjectURL(data.blob);
-      this.audio.src = this.url;
-      this.audio.loop = true;
-      this.audio.volume = (state.settings.musicVolume || 50) / 100;
-      this.updateUI();
-    } else {
-      this.clearUI();
-    }
-  },
-
-  async setFile(file) {
-    if (!file) return;
-    this.name = file.name;
-    this.url = URL.createObjectURL(file);
-    this.audio.src = this.url;
-    this.audio.loop = true;
-    this.audio.volume = (state.settings.musicVolume || 50) / 100;
-    
-    await idbMusic.saveBlob(file, file.name);
-    this.updateUI();
-  },
-
-  async clear() {
-    this.audio.pause();
-    if (this.url) URL.revokeObjectURL(this.url);
-    this.url = null;
-    this.name = null;
-    this.audio.src = '';
-    await idbMusic.clear();
-    this.clearUI();
-  },
-
-  updateUI() {
-    const fName = document.getElementById('music-file-name');
-    const npName = document.getElementById('music-now-playing-name');
-    const fsTrack = document.getElementById('fs-music-track');
-    const btnClear = document.getElementById('btn-clear-music');
-    const npRow = document.getElementById('music-now-playing-row');
-    const fsBar = document.getElementById('fs-music-bar');
-    if (fName) fName.textContent = this.name;
-    if (npName) npName.textContent = this.name;
-    if (fsTrack) fsTrack.textContent = this.name;
-    if (btnClear) btnClear.style.display = 'flex';
-    if (npRow) npRow.style.display = 'flex';
-    if (fsBar) fsBar.style.display = 'flex';
-  },
-
-  clearUI() {
-    const fName = document.getElementById('music-file-name');
-    const btnClear = document.getElementById('btn-clear-music');
-    const npRow = document.getElementById('music-now-playing-row');
-    const fsBar = document.getElementById('fs-music-bar');
-    if (fName) fName.textContent = 'No file chosen';
-    if (btnClear) btnClear.style.display = 'none';
-    if (npRow) npRow.style.display = 'none';
-    if (fsBar) fsBar.style.display = 'none';
-  },
-
-  start() {
-    if (!state.settings.musicEnabled || !this.url) return;
-    const playDuring = state.settings.musicPlayDuring || 'study';
-    if (playDuring === 'study' && state.timer.phase !== 'STUDY') {
-      this.pause();
-      return;
-    }
-    this.audio.play().catch(e => console.warn('Music play blocked:', e));
-  },
-
-  pause() {
-    this.audio.pause();
-  },
-
-  stop() {
-    this.pause();
-  },
-
-  setVolume(pct) {
-    this.audio.volume = pct / 100;
-    state.settings.musicVolume = pct;
-    persist();
-  }
-};
-
-  // Bind Music UI Events
-  const chkMusic = document.getElementById('musicEnabled');
-  const fileMusic = document.getElementById('music-file-input');
-  const btnClearMusic = document.getElementById('btn-clear-music');
-  const volMusic = document.getElementById('musicVolume');
-  const txtVolMusic = document.getElementById('music-vol-pct');
-  const selMusicPhase = document.getElementById('musicPlayDuring');
-
-  if (chkMusic) {
-    chkMusic.checked = !!state.settings.musicEnabled;
-    chkMusic.addEventListener('change', (e) => {
-      state.settings.musicEnabled = e.target.checked;
-      persist();
-      if (!state.settings.musicEnabled) music.pause();
-      else if (state.timer.active) music.start();
-    });
-  }
-
-  if (fileMusic) {
-    fileMusic.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        music.setFile(e.target.files[0]);
-      }
-    });
-  }
-
-  if (btnClearMusic) {
-    btnClearMusic.addEventListener('click', () => {
-      music.clear();
-      if (fileMusic) fileMusic.value = '';
-    });
-  }
-
-  if (volMusic) {
-    volMusic.value = state.settings.musicVolume || 50;
-    if (txtVolMusic) txtVolMusic.textContent = volMusic.value + '%';
-    volMusic.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      if (txtVolMusic) txtVolMusic.textContent = val + '%';
-      music.setVolume(val);
-    });
-  }
-
-  if (selMusicPhase) {
-    selMusicPhase.value = state.settings.musicPlayDuring || 'study';
-    selMusicPhase.addEventListener('change', (e) => {
-      state.settings.musicPlayDuring = e.target.value;
-      persist();
-      if (state.timer.active) music.start();
-    });
-  }
-
   // Load saved music track from IndexedDB
   music.init();
-
 
   // Periodic heartbeat: keep ring / status time fresh during a paused state
   // and re-syncs display every second while running
