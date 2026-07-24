@@ -2119,6 +2119,8 @@ button {
     padding: 0 16px;
     height: var(--nav-h);
     justify-content: space-between;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   /* Brand: keep icon + name, but smaller */
