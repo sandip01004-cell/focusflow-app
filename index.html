@@ -324,10 +324,11 @@
               </label>
             </div>
 
+            <!-- Alarm Sound section (replaces/extends old Sound Preset row) -->
             <div class="setting-row" id="sound-preset-row">
               <div class="setting-info">
-                <div class="setting-name">Sound Preset</div>
-                <div class="setting-desc">Choose your completion sound</div>
+                <div class="setting-name">Built-in Sound</div>
+                <div class="setting-desc">Choose your completion chime</div>
               </div>
               <div class="sound-controls">
                 <select class="select-filter" id="soundPreset" aria-label="Sound preset">
@@ -336,8 +337,35 @@
                   <option value="deep">Deep Gong</option>
                   <option value="ding">Bright Ding</option>
                 </select>
-                <button class="btn btn-tiny" id="btn-test-sound">Test ▶</button>
+                <button class="btn btn-tiny" id="btn-test-sound">Test &#9654;</button>
               </div>
+            </div>
+
+            <!-- Custom Alarm Sound -->
+            <div class="setting-row alarm-custom-row">
+              <div class="setting-info">
+                <div class="setting-name">Custom Alarm Sound</div>
+                <div class="setting-desc alarm-file-name" id="alarm-file-name">No file chosen</div>
+              </div>
+              <div class="alarm-file-controls">
+                <label class="btn btn-tiny alarm-file-label" for="alarm-file-input">Choose File</label>
+                <input type="file" id="alarm-file-input" accept="audio/*" style="display:none" aria-label="Choose custom alarm audio file" />
+                <button class="btn btn-tiny" id="btn-preview-alarm" title="Preview alarm sound">&#9654; Test</button>
+                <button class="btn btn-tiny btn-alarm-clear" id="btn-clear-alarm" title="Remove custom alarm" style="display:none">&#10005;</button>
+              </div>
+            </div>
+
+            <!-- Alarm Duration -->
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-name">Alarm Duration</div>
+                <div class="setting-desc">How long the alarm rings before stopping</div>
+              </div>
+              <select class="select-filter" id="alarmDuration" aria-label="Alarm duration">
+                <option value="15">15 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60" selected>60 seconds</option>
+              </select>
             </div>
 
             <div class="setting-row">
@@ -473,6 +501,20 @@
         <span class="fs-music-track" id="fs-music-track"></span>
       </div>
       <div class="fs-hint">tap anywhere to pause</div>
+    </div>
+
+    <!-- ── Completion / Alarm Screen ──
+         Shown when a session or break finishes. Lives inside
+         the fullscreen overlay so it inherits the morph animation.
+         Hidden by default; becomes visible via JS .visible class. -->
+    <div class="fs-completion" id="fs-completion" role="alert" aria-live="assertive">
+      <div class="fs-completion-icon" aria-hidden="true">✓</div>
+      <div class="fs-completion-title" id="fs-completion-title">Session Complete</div>
+      <div class="fs-completion-sub" id="fs-completion-sub"></div>
+      <button class="fs-dismiss-btn" id="btn-dismiss-alarm" aria-label="Dismiss alarm and return to timer">
+        Dismiss
+      </button>
+      <div class="fs-alarm-countdown" id="alarm-countdown"></div>
     </div>
   </div>
 
@@ -665,6 +707,7 @@
     })();
   </script>
 
+  <script src="alarm.js"></script>
   <script src="app.js"></script>
 </body>
 

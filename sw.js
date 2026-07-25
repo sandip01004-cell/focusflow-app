@@ -3,7 +3,7 @@
    Strategy: Cache-First for app shell, Network-First for fonts
    ================================================================ */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `focusflow-${CACHE_VERSION}`;
 
 // App shell — all local files needed to run offline
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './',
   './index.html',
   './style.css',
+  './alarm.js',
   './app.js',
   './manifest.json',
   './img/icon.png',

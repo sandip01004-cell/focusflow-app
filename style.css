@@ -1764,6 +1764,163 @@ button {
 }
 
 /* ─────────────────────────────────────────────────
+   ■■■ COMPLETION / ALARM SCREEN ■■■
+   Lives inside .fullscreen-timer so it inherits the
+   morph animation. Hidden by default; revealed when
+   .visible is added by JS.
+───────────────────────────────────────────────── */
+
+.fs-completion {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+  transition: opacity 420ms ease, transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 24px;
+  text-align: center;
+  background: radial-gradient(
+    ellipse 60% 40% at 50% 40%,
+    rgba(74, 222, 128, 0.06) 0%,
+    transparent 70%
+  );
+}
+
+.fs-completion.visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1);
+}
+
+.fs-completion-icon {
+  font-size: clamp(64px, 8vw, 96px);
+  font-weight: 700;
+  color: #4ade80;
+  line-height: 1;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 24px rgba(74, 222, 128, 0.45));
+  animation: completionPulse 2.4s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+@keyframes completionPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.40));
+  }
+  50% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 36px rgba(74, 222, 128, 0.65));
+  }
+}
+
+.fs-completion-title {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.90);
+  margin-bottom: 10px;
+}
+
+.fs-completion-sub {
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.06em;
+  margin-bottom: 48px;
+}
+
+.fs-dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1.5px solid rgba(74, 222, 128, 0.35);
+  border-radius: 50px;
+  padding: 16px 52px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease,
+    transform 160ms ease, box-shadow 200ms ease;
+  margin-bottom: 20px;
+  min-width: 180px;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+}
+
+.fs-dismiss-btn:hover {
+  background: rgba(74, 222, 128, 0.25);
+  border-color: rgba(74, 222, 128, 0.60);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(74, 222, 128, 0.18);
+}
+
+.fs-dismiss-btn:active {
+  transform: scale(0.97);
+}
+
+.fs-alarm-countdown {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.20);
+  user-select: none;
+}
+
+/* ─────────────────────────────────────────────────
+   ■■■ ALARM SETTINGS (Settings page) ■■■
+───────────────────────────────────────────────── */
+
+.alarm-file-label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all var(--ease-fast);
+}
+
+.alarm-file-label:hover {
+  background: var(--card-hover);
+  color: var(--text1);
+}
+
+.btn-alarm-clear {
+  background: rgba(239, 68, 68, 0.10);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.20);
+}
+
+.btn-alarm-clear:hover {
+  background: rgba(239, 68, 68, 0.20);
+}
+
+.alarm-file-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.alarm-file-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alarm-custom-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ─────────────────────────────────────────────────
    UTILITIES
 ───────────────────────────────────────────────── */
 .btn-sm {

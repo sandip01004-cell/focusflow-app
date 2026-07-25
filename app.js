@@ -46,31 +46,35 @@ function openMusicDB() {
   });
 }
 
-async function saveMusicBlob(file) {
+/**
+ * Generalized blob save — key defaults to 'current' (music track).
+ * alarm.js uses key 'alarm' for the custom alarm file.
+ */
+async function saveMusicBlob(file, key = 'current') {
   const db = await openMusicDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(file, 'current');
+    tx.objectStore(IDB_STORE).put(file, key);
     tx.oncomplete = () => { resolve(); db.close(); };
     tx.onerror = () => { reject(tx.error); db.close(); };
   });
 }
 
-async function getMusicBlob() {
+async function getMusicBlob(key = 'current') {
   const db = await openMusicDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readonly');
-    const req = tx.objectStore(IDB_STORE).get('current');
+    const req = tx.objectStore(IDB_STORE).get(key);
     req.onsuccess = () => { resolve(req.result); db.close(); };
     req.onerror = () => { reject(req.error); db.close(); };
   });
 }
 
-async function deleteMusicBlob() {
+async function deleteMusicBlob(key = 'current') {
   const db = await openMusicDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).delete('current');
+    tx.objectStore(IDB_STORE).delete(key);
     tx.oncomplete = () => { resolve(); db.close(); };
     tx.onerror = () => { reject(tx.error); db.close(); };
   });
@@ -159,14 +163,18 @@ const DEFAULT_SETTINGS = {
   musicVolume: 50,
   musicPlayDuring: 'study',
   musicFileName: null,
+  // Alarm settings (new)
+  alarmType: 'builtin',    // 'builtin' | 'custom'
+  alarmFileName: null,     // display name of custom alarm file
+  alarmDuration: 60,       // seconds the alarm rings before auto-stopping: 15 | 30 | 60
 };
 
 const DEFAULT_TIMER = {
   active: false,
   running: false,
-  type: 'study',    // 'study' | 'break'
+  type: 'study',       // 'study' | 'break'
   startTs: null,       // Date.now() when last resumed
-  targetSecs: 1500,       // duration of current segment
+  targetSecs: 1500,    // duration of current segment in seconds
   elapsed: 0,          // seconds accumulated before last pause
   cycle: 1,
   totalCycles: 4,
@@ -175,7 +183,11 @@ const DEFAULT_TIMER = {
   autoMode: false,
   linkedTaskId: null,
   pauses: 0,
-  sessionStart: null,       // when this study segment began (wall time)
+  sessionStart: null,  // wall-clock time when this study segment began
+  // Completion / alarm state (new)
+  completed: false,    // true once segment naturally reached zero
+  alarmActive: false,  // true while alarm is ringing
+  alarmStartTs: null,  // Date.now() when alarm began
 };
 
 // ────────────────────────────────────────────────────────────
@@ -197,14 +209,31 @@ const state = {
   editingTaskId: null,
 };
 
-// ── If page was reloaded while timer was running, compute elapsed since then ──
+// ── If page was reloaded/woken while timer was running, compute elapsed since then ──
 if (state.timer.running && state.timer.startTs) {
   const away = (Date.now() - state.timer.startTs) / 1000;
-  state.timer.elapsed = Math.min(state.timer.elapsed + away, state.timer.targetSecs);
+  state.timer.elapsed = state.timer.elapsed + away;
   state.timer.running = false;
   state.timer.startTs = null;
+
+  // Sleep detection: if the timer should have already finished while away
+  // (laptop was asleep, tab was hidden), handle it gracefully instead of
+  // pretending the timer is still running or silently discarding the session.
+  if (state.timer.elapsed >= state.timer.targetSecs && state.timer.active && !state.timer.completed) {
+    state.timer.elapsed = state.timer.targetSecs; // clamp to exact end
+    if (state.timer.type === 'study') saveSession(state.timer);  // note: saveSession is defined below
+    state.timer.completed    = true;
+    state.timer.alarmActive  = true;
+    // alarmStartTs = "now" since this is the first moment we woke up and noticed
+    state.timer.alarmStartTs = Date.now();
+  } else {
+    // Normal clamp (pause mid-session or brief tab switch)
+    state.timer.elapsed = Math.min(state.timer.elapsed, state.timer.targetSecs);
+  }
+
   persist(STORE.TIMER, state.timer);
 }
+
 
 // ────────────────────────────────────────────────────────────
 // DOM CACHE
@@ -244,6 +273,12 @@ const elFsPhase = $('#fs-phase');
 const elFsCycle = $('#fs-cycle');
 const elFsTime = $('#fs-time');
 const elFsTask = $('#fs-task');
+// Completion screen (inside fullscreen overlay)
+const elFsCompletion      = $('#fs-completion');
+const elFsCompletionTitle = $('#fs-completion-title');
+const elFsCompletionSub   = $('#fs-completion-sub');
+const elBtnDismissAlarm   = $('#btn-dismiss-alarm');
+const elAlarmCountdown    = $('#alarm-countdown');
 
 // Todo
 const elTaskList = $('#task-list');
@@ -277,6 +312,12 @@ const elBtnTestSound = $('#btn-test-sound');
 const elSoundPresetRow = $('#sound-preset-row');
 const elBtnClearHistory = $('#btn-clear-history');
 const elBtnClearAll = $('#btn-clear-all');
+// Alarm settings controls
+const elAlarmDuration   = $('#alarmDuration');
+const elAlarmFileInput  = $('#alarm-file-input');
+const elAlarmFileName   = $('#alarm-file-name');
+const elBtnClearAlarm   = $('#btn-clear-alarm');
+const elBtnPreviewAlarm = $('#btn-preview-alarm');
 
 // Task modal
 const elModalBackdrop = $('#modal-backdrop');
@@ -590,6 +631,10 @@ function endSession() {
   const t = state.timer;
   if (!t.active) return;
 
+  // Stop alarm first (covers the case where user ends during alarm state)
+  alarm.stop();
+  hideCompletionScreen();
+
   // Only save study sessions (not breaks) to history
   if (t.type === 'study' && t.elapsed > 0) {
     saveSession(t);
@@ -617,6 +662,7 @@ function endSession() {
   elPauseCard.style.display = 'none';
   music.stop();
 }
+
 
 
 /** Called on Start / Resume */
@@ -675,6 +721,10 @@ function pauseTimer() {
 function resetTimer() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
+  // Stop alarm if it was ringing (e.g. user hits Reset during alarm state)
+  alarm.stop();
+  hideCompletionScreen();
+
   // Preserve config values
   const prev = state.timer;
   state.timer = {
@@ -719,51 +769,89 @@ function tick() {
   rafId = requestAnimationFrame(tick);
 }
 
+/**
+ * Briefly flash the fullscreen overlay to signal completion.
+ * Fixes the previously undefined flashFullscreen() call.
+ */
+function flashFullscreen() {
+  elFs.classList.add('flash');
+  setTimeout(() => elFs.classList.remove('flash'), 1300);
+}
+
 /** Segment (study or break) has finished */
 function onSegmentComplete() {
   const t = state.timer;
 
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
-  // Finalize elapsed
+  // Finalize elapsed — clamp to exact target so History shows full duration
   if (t.startTs) t.elapsed += (Date.now() - t.startTs) / 1000;
-  t.running = false;
-  t.startTs = null;
+  t.elapsed  = Math.min(t.elapsed, t.targetSecs);
+  t.running  = false;
+  t.startTs  = null;
 
-  // Save study session to history
+  // Save study session to history (breaks are not recorded)
   if (t.type === 'study') saveSession(t);
 
-  // Flash fullscreen
+  // Flash fullscreen background to signal the moment of completion
   flashFullscreen();
 
-  // Play sound + notify
-  playSound();
+  // Stop background music regardless of phase
+  music.stop();
 
   if (t.type === 'study') {
-    notify('FocusFlow', `Study session ${t.cycle}/${t.totalCycles} complete! Take a break. 🎉`);
+    notify('FocusFlow', `Study session ${t.cycle}/${t.totalCycles} complete! 🎉`);
 
     if (t.autoMode) {
       const isLast = t.cycle >= t.totalCycles;
       if (isLast) {
+        // All cycles done — enter alarm/completion state
         notify('FocusFlow', 'All cycles complete — great work! 🏆');
-        setTimeout(() => finishAllCycles(), 1400);
+        setTimeout(() => enterAlarmState(), 800);
       } else {
+        // Auto-mode: transition to break without alarm screen
         setTimeout(() => beginBreak(), 700);
       }
     } else {
-      setTimeout(() => finishSession(), 800);
+      // Manual mode: enter alarm/completion state so user must dismiss
+      setTimeout(() => enterAlarmState(), 800);
     }
   } else {
     // Break finished
     notify('FocusFlow', 'Break over — time to focus! ▶');
     if (t.autoMode) {
       t.cycle++;
+      // Auto-mode: transition directly to next study segment
       setTimeout(() => beginNextStudy(), 700);
     } else {
-      setTimeout(() => finishSession(), 800);
+      // Manual mode: alarm/completion after break too
+      setTimeout(() => enterAlarmState(), 800);
     }
   }
 }
+
+/**
+ * Enter the alarm/completion state:
+ * - Sets completed + alarmActive flags on the timer
+ * - Starts the AlarmEngine loop
+ * - Shows the fullscreen completion screen
+ * - Sends a push notification (if granted)
+ */
+function enterAlarmState() {
+  const t = state.timer;
+
+  t.completed    = true;
+  t.alarmActive  = true;
+  t.alarmStartTs = Date.now();
+  persist(STORE.TIMER, t);
+
+  alarm.start();
+
+  const label = t.type === 'study' ? 'Study Session' : 'Break';
+  const dur   = Math.floor(t.elapsed);
+  showCompletionScreen(label, dur, t);
+}
+
 
 function beginBreak() {
   const t = state.timer;
@@ -800,16 +888,25 @@ function beginNextStudy() {
   music.play();
 }
 
+/**
+ * finishSession — dismisses the alarm and resets the timer to READY state.
+ * Called by:
+ *  - The dismiss button on the completion screen
+ *  - The Escape key (via keyboard handler)
+ */
 function finishSession() {
+  alarm.stop();
+  hideCompletionScreen();
+
   const prev = state.timer;
   state.timer = {
     ...DEFAULT_TIMER,
     studyMinutes: prev.studyMinutes,
     breakMinutes: prev.breakMinutes,
-    totalCycles: prev.totalCycles,
-    autoMode: prev.autoMode,
+    totalCycles:  prev.totalCycles,
+    autoMode:     prev.autoMode,
     linkedTaskId: prev.linkedTaskId,
-    targetSecs: prev.studyMinutes * 60,
+    targetSecs:   prev.studyMinutes * 60,
   };
 
   persist(STORE.TIMER, state.timer);
@@ -818,12 +915,112 @@ function finishSession() {
   updatePomControls();
   updateNavBadge();
   elPauseCard.style.display = 'none';
-  music.stop();
 }
 
+/**
+ * finishAllCycles — same as finishSession but called from auto-mode
+ * after the last cycle has completed. Enters alarm state (via
+ * enterAlarmState) rather than directly calling finishSession.
+ */
 function finishAllCycles() {
-  finishSession();
+  enterAlarmState();
 }
+
+/* ────────────────────────────────────────────────────────────
+   COMPLETION SCREEN
+   The completion screen lives inside #fullscreen-timer so it
+   inherits the fullscreen morph/animation for free.
+──────────────────────────────────────────────────────────── */
+
+// Countdown display interval handle (visual only — NOT used for timing)
+let _countdownInterval = null;
+
+/**
+ * showCompletionScreen(label, durationSecs, timerState)
+ *
+ * Populates and reveals #fs-completion within the fullscreen overlay.
+ * The running timer display (.fs-content) is hidden.
+ * A visual countdown updates every second showing remaining alarm time.
+ */
+function showCompletionScreen(label, durationSecs, t) {
+  // Ensure fullscreen overlay is open (it may already be if user was in FS)
+  if (!elFs.classList.contains('fs-active')) {
+    showFullscreen();
+  }
+
+  // Populate content
+  const cycleText = (t && t.type === 'study')
+    ? `Cycle ${t.cycle} of ${t.totalCycles}`
+    : 'Break complete';
+
+  if (elFsCompletionTitle) {
+    elFsCompletionTitle.textContent =
+      (t && t.type === 'study') ? '✓ Session Complete' : '✓ Break Complete';
+  }
+  if (elFsCompletionSub) {
+    elFsCompletionSub.textContent = durationSecs > 0
+      ? `${cycleText} · ${fmtDur(durationSecs)} logged`
+      : cycleText;
+  }
+
+  // Hide the normal running-timer content, show completion panel
+  const fsContent = elFs.querySelector('.fs-content');
+  if (fsContent) fsContent.style.display = 'none';
+  if (elFsCompletion) {
+    elFsCompletion.classList.add('visible');
+    // Trigger entry animation
+    void elFsCompletion.offsetHeight;
+  }
+
+  // Start visual countdown (ticks every second, uses timestamps for accuracy)
+  _startAlarmCountdown();
+}
+
+/** Hide the completion screen and restore the normal FS content */
+function hideCompletionScreen() {
+  clearInterval(_countdownInterval);
+  _countdownInterval = null;
+
+  if (elFsCompletion) elFsCompletion.classList.remove('visible');
+
+  const fsContent = elFs.querySelector('.fs-content');
+  if (fsContent) fsContent.style.display = '';
+}
+
+/**
+ * Visual countdown showing "Alarm stops in Xs".
+ * Uses setInterval purely for display — the actual stopping
+ * is controlled by alarm._playOnce() timestamp comparison.
+ */
+function _startAlarmCountdown() {
+  clearInterval(_countdownInterval);
+
+  const totalDuration = (state.settings.alarmDuration || 60) * 1000;
+  const startTs       = state.timer.alarmStartTs || Date.now();
+
+  function tick() {
+    if (!elAlarmCountdown) return;
+    const remaining = Math.max(0, Math.ceil((startTs + totalDuration - Date.now()) / 1000));
+    elAlarmCountdown.textContent = remaining > 0
+      ? `Alarm stops in ${remaining}s`
+      : 'Alarm stopped';
+  }
+
+  tick(); // immediate first update
+  _countdownInterval = setInterval(tick, 1000);
+}
+
+/**
+ * Called by alarm.js when the alarm expires naturally (max duration reached).
+ * Stops the countdown, updates the countdown label, but leaves the
+ * completion overlay visible — the user still needs to tap dismiss.
+ */
+function _onAlarmExpired() {
+  clearInterval(_countdownInterval);
+  _countdownInterval = null;
+  if (elAlarmCountdown) elAlarmCountdown.textContent = 'Alarm stopped';
+}
+
 
 /** Persist session record to history */
 function saveSession(t) {
@@ -1455,11 +1652,20 @@ function applySettings() {
   elNotifEnabled.checked = s.notifications;
   elSoundPreset.value = s.soundPreset;
 
-  elSoundPresetRow.style.display = s.sound ? '' : 'none';
+  // Sound preset row only shown when sound is enabled AND alarm type is built-in
+  // (updateAlarmUI also adjusts this, but set base visibility here too)
+  elSoundPresetRow.style.display = (s.sound && s.alarmType !== 'custom') ? '' : 'none';
+
+  // Alarm duration select
+  if (elAlarmDuration) elAlarmDuration.value = String(s.alarmDuration || 60);
 
   // Music
   updateMusicUI();
+
+  // Alarm (defined in alarm.js, loaded before app.js)
+  if (typeof updateAlarmUI === 'function') updateAlarmUI();
 }
+
 
 function saveSetting(key, val) {
   state.settings[key] = val;
@@ -1532,8 +1738,12 @@ elBtnReset.addEventListener('click', () => {
 // ── End & Save: mark paused session as completed ──
 elBtnEndSession.addEventListener('click', () => { endSession(); });
 
-// ── Fullscreen: tap to pause ──
-elFs.addEventListener('click', () => pauseTimer());
+// ── Fullscreen: tap to pause — but only if NOT in completion/alarm state ──
+elFs.addEventListener('click', (e) => {
+  // Do not pause if the completion screen is visible
+  if (elFsCompletion && elFsCompletion.classList.contains('visible')) return;
+  pauseTimer();
+});
 
 // ── Link task button ──
 elBtnLinkTask.addEventListener('click', openLinkModal);
@@ -1659,6 +1869,49 @@ $('#btn-clear-music').addEventListener('click', async () => {
   await music.clear();
 });
 
+// ── Alarm sound settings ──
+
+// Custom alarm file upload
+if (elAlarmFileInput) {
+  elAlarmFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    getAudio(); // ensure AudioContext initialized for preview
+    await alarm.setFile(file);
+    e.target.value = ''; // allow re-picking the same file
+  });
+}
+
+// Remove custom alarm file
+if (elBtnClearAlarm) {
+  elBtnClearAlarm.addEventListener('click', async () => {
+    if (!window.confirm('Remove the custom alarm sound?')) return;
+    await alarm.clear();
+  });
+}
+
+// Preview / test the alarm sound
+if (elBtnPreviewAlarm) {
+  elBtnPreviewAlarm.addEventListener('click', () => {
+    getAudio();
+    alarm.testPlay();
+  });
+}
+
+// Alarm duration select
+if (elAlarmDuration) {
+  elAlarmDuration.addEventListener('change', () => {
+    saveSetting('alarmDuration', parseInt(elAlarmDuration.value, 10));
+  });
+}
+
+// Dismiss alarm / completion screen
+if (elBtnDismissAlarm) {
+  elBtnDismissAlarm.addEventListener('click', () => {
+    finishSession();
+  });
+}
+
 elBtnClearHistory.addEventListener('click', () => {
   if (!window.confirm('Clear all session history? This cannot be undone.')) return;
   state.sessions = [];
@@ -1672,16 +1925,22 @@ elBtnClearAll.addEventListener('click', () => {
   window.location.reload();
 });
 
+
 // ── Global keyboard shortcuts ──
 document.addEventListener('keydown', e => {
-  // Space = pause when fullscreen is visible
+  // Space = pause when fullscreen is visible (but not during alarm/completion)
   if (e.code === 'Space' && elFs.classList.contains('fs-active')) {
+    if (elFsCompletion && elFsCompletion.classList.contains('visible')) return; // ignore during alarm
     e.preventDefault();
     pauseTimer();
     return;
   }
-  // Escape = close topmost modal
+  // Escape = dismiss completion screen if active, otherwise close topmost modal
   if (e.key === 'Escape') {
+    if (elFsCompletion && elFsCompletion.classList.contains('visible')) {
+      finishSession();
+      return;
+    }
     if (elLinkBackdrop.classList.contains('open')) { closeLinkModal(); return; }
     if (elModalBackdrop.classList.contains('open')) { closeModal(); return; }
   }
@@ -1689,11 +1948,33 @@ document.addEventListener('keydown', e => {
 
 // ── Visibility change: recalculate elapsed when tab becomes visible ──
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && state.timer.running) {
-    // The next tick() call will naturally pick up the correct remaining time.
-    // If time ran out while hidden, onSegmentComplete() handles it.
+  if (document.hidden) return;
+
+  // Case 1: Page woke while alarm was already active (sleep-missed completion)
+  if (state.timer.alarmActive) {
+    // Alarm was already entered before sleep — re-show completion screen
+    // and resume alarm audio (which may have been silenced during sleep).
+    const t = state.timer;
+    if (!alarm._ringing) alarm.start();
+    if (elFsCompletion && !elFsCompletion.classList.contains('visible')) {
+      const label = t.type === 'study' ? 'Study Session' : 'Break';
+      showCompletionScreen(label, Math.floor(t.elapsed), t);
+    }
+    return;
+  }
+
+  // Case 2: Timer was still running — resume tick (timestamp-based, picks up
+  // correct remaining time automatically; onSegmentComplete fires if it expired)
+  if (state.timer.running) {
     if (!rafId) tick();
   }
+});
+
+// ── pageshow: catches bfcache restore on mobile browsers ──
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return; // only act on bfcache restores
+  if (state.timer.alarmActive && !alarm._ringing) alarm.start();
+  if (state.timer.running && !rafId) tick();
 });
 
 // ────────────────────────────────────────────────────────────
@@ -1792,14 +2073,28 @@ function init() {
   // Load saved music track from IndexedDB
   music.init();
 
+  // Load saved alarm file from IndexedDB (defined in alarm.js)
+  alarm.init();
+
+  // If the timer was in alarm state when the page loaded (sleep detection
+  // resolved above in the startup block), enter the completion UI now that
+  // the DOM is ready. alarm.start() is called inside enterAlarmState/showCompletionScreen.
+  if (t.alarmActive) {
+    // Re-enter alarm display without changing timestamps
+    if (!alarm._ringing) alarm.start();
+    const label = t.type === 'study' ? 'Study Session' : 'Break';
+    showCompletionScreen(label, Math.floor(t.elapsed), t);
+  }
+
   // Periodic heartbeat: keep ring / status time fresh during a paused state
   // and re-syncs display every second while running
   setInterval(() => {
-    if (state.timer.active) {
+    if (state.timer.active && !state.timer.completed) {
       updatePomStatus();
       updatePauseStats();
     }
   }, 1000);
 }
+
 
 init();
