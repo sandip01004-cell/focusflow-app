@@ -503,6 +503,17 @@
       <div class="fs-hint">tap anywhere to pause</div>
     </div>
 
+    <!-- ── Auto-Mode Transition Toast ──
+         Brief banner shown when auto-mode switches phases.
+         Slides in, shows a countdown, then fades away. -->
+    <div class="fs-auto-toast" id="fs-auto-toast" role="status" aria-live="polite">
+      <div class="fs-auto-toast-icon" id="fs-auto-toast-icon">☕</div>
+      <div class="fs-auto-toast-body">
+        <div class="fs-auto-toast-title" id="fs-auto-toast-title">Break Starting</div>
+        <div class="fs-auto-toast-sub" id="fs-auto-toast-sub">Starting in 3s…</div>
+      </div>
+    </div>
+
     <!-- ── Completion / Alarm Screen ──
          Shown when a session or break finishes. Lives inside
          the fullscreen overlay so it inherits the morph animation.
@@ -511,9 +522,20 @@
       <div class="fs-completion-icon" aria-hidden="true">✓</div>
       <div class="fs-completion-title" id="fs-completion-title">Session Complete</div>
       <div class="fs-completion-sub" id="fs-completion-sub"></div>
-      <button class="fs-dismiss-btn" id="btn-dismiss-alarm" aria-label="Dismiss alarm and return to timer">
-        Dismiss
-      </button>
+      <div class="fs-completion-actions" id="fs-completion-actions">
+        <button class="fs-action-btn fs-action-primary" id="btn-next-pomodoro" aria-label="Start the next Pomodoro">
+          <span class="fs-action-icon">▶</span>
+          <span>Start Next Pomodoro</span>
+        </button>
+        <button class="fs-action-btn fs-action-secondary" id="btn-start-rest" aria-label="Start rest timer">
+          <span class="fs-action-icon">☕</span>
+          <span id="btn-start-rest-label">Start Break</span>
+        </button>
+        <button class="fs-action-btn fs-action-ghost" id="btn-exit-to-main" aria-label="Exit to main page">
+          <span class="fs-action-icon">⟵</span>
+          <span>Exit to Main</span>
+        </button>
+      </div>
       <div class="fs-alarm-countdown" id="alarm-countdown"></div>
     </div>
   </div>

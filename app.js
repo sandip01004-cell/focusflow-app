@@ -277,8 +277,17 @@ const elFsTask = $('#fs-task');
 const elFsCompletion      = $('#fs-completion');
 const elFsCompletionTitle = $('#fs-completion-title');
 const elFsCompletionSub   = $('#fs-completion-sub');
-const elBtnDismissAlarm   = $('#btn-dismiss-alarm');
 const elAlarmCountdown    = $('#alarm-countdown');
+// Completion action buttons
+const elBtnNextPomodoro   = $('#btn-next-pomodoro');
+const elBtnStartRest      = $('#btn-start-rest');
+const elBtnStartRestLabel = $('#btn-start-rest-label');
+const elBtnExitToMain     = $('#btn-exit-to-main');
+// Auto-mode transition toast
+const elAutoToast      = $('#fs-auto-toast');
+const elAutoToastIcon  = $('#fs-auto-toast-icon');
+const elAutoToastTitle = $('#fs-auto-toast-title');
+const elAutoToastSub   = $('#fs-auto-toast-sub');
 
 // Todo
 const elTaskList = $('#task-list');
@@ -778,6 +787,62 @@ function flashFullscreen() {
   setTimeout(() => elFs.classList.remove('flash'), 1300);
 }
 
+/**
+ * showAutoTransitionToast(phase, delayMs, onDone)
+ *
+ * Shows a pill-toast at the top of the fullscreen overlay for auto-mode transitions.
+ * @param {string}   phase    - 'break' or 'study'
+ * @param {number}   delayMs  - how long to show the toast before calling onDone
+ * @param {Function} onDone   - called after the countdown + exit animation
+ */
+let _toastTimer = null;
+function showAutoTransitionToast(phase, delayMs, onDone) {
+  if (!elAutoToast) { if (onDone) onDone(); return; }
+
+  // Clear any running toast
+  clearTimeout(_toastTimer);
+  elAutoToast.classList.remove('visible', 'exiting', 'phase-break', 'phase-study');
+
+  const isBreak = phase === 'break';
+  elAutoToast.classList.add(isBreak ? 'phase-break' : 'phase-study');
+
+  if (elAutoToastIcon)  elAutoToastIcon.textContent  = isBreak ? '☕' : '▶';
+  if (elAutoToastTitle) elAutoToastTitle.textContent = isBreak ? 'Break Starting' : 'Study Starting';
+
+  // Countdown display
+  const totalSecs   = Math.round(delayMs / 1000);
+  let   remaining   = totalSecs;
+  const updateSub   = () => {
+    if (elAutoToastSub) elAutoToastSub.textContent = `Starting in ${remaining}s…`;
+  };
+  updateSub();
+
+  // Force reflow then slide in
+  void elAutoToast.offsetHeight;
+  elAutoToast.classList.add('visible');
+
+  // Tick countdown every second
+  const countdownId = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      updateSub();
+    } else {
+      clearInterval(countdownId);
+    }
+  }, 1000);
+
+  // After delayMs: slide toast out, then trigger phase transition
+  _toastTimer = setTimeout(() => {
+    clearInterval(countdownId);
+    elAutoToast.classList.remove('visible');
+    elAutoToast.classList.add('exiting');
+    setTimeout(() => {
+      elAutoToast.classList.remove('exiting');
+      if (onDone) onDone();
+    }, 420); // matches .exiting transition
+  }, delayMs);
+}
+
 /** Segment (study or break) has finished */
 function onSegmentComplete() {
   const t = state.timer;
@@ -807,10 +872,12 @@ function onSegmentComplete() {
       if (isLast) {
         // All cycles done — enter alarm/completion state
         notify('FocusFlow', 'All cycles complete — great work! 🏆');
+        playSound();
         setTimeout(() => enterAlarmState(), 800);
       } else {
-        // Auto-mode: transition to break without alarm screen
-        setTimeout(() => beginBreak(), 700);
+        // Auto-mode: play sound + show toast, then transition to break
+        playSound();
+        showAutoTransitionToast('break', 3000, () => beginBreak());
       }
     } else {
       // Manual mode: enter alarm/completion state so user must dismiss
@@ -821,10 +888,13 @@ function onSegmentComplete() {
     notify('FocusFlow', 'Break over — time to focus! ▶');
     if (t.autoMode) {
       t.cycle++;
-      // Auto-mode: transition directly to next study segment
-      setTimeout(() => beginNextStudy(), 700);
+      // Auto-mode: play sound + show toast, then transition to next study
+      playSound();
+      showAutoTransitionToast('study', 3000, () => beginNextStudy());
     } else {
-      // Manual mode: alarm/completion after break too
+      // Manual mode: increment cycle before alarm so the completion
+      // screen can correctly determine if this was the last cycle.
+      t.cycle++;
       setTimeout(() => enterAlarmState(), 800);
     }
   }
@@ -940,6 +1010,7 @@ let _countdownInterval = null;
  *
  * Populates and reveals #fs-completion within the fullscreen overlay.
  * The running timer display (.fs-content) is hidden.
+ * Buttons are shown/hidden based on phase and cycle position.
  * A visual countdown updates every second showing remaining alarm time.
  */
 function showCompletionScreen(label, durationSecs, t) {
@@ -948,19 +1019,41 @@ function showCompletionScreen(label, durationSecs, t) {
     showFullscreen();
   }
 
-  // Populate content
-  const cycleText = (t && t.type === 'study')
+  const isStudy   = t && t.type === 'study';
+  // For study: last cycle when cycle >= totalCycles (no more study sessions after this).
+  // For break: cycle was already incremented at break-end; last when cycle > totalCycles.
+  const isLastCycle = t && (isStudy ? t.cycle >= t.totalCycles : t.cycle > t.totalCycles);
+
+  // Populate title + subtitle
+  const cycleText = isStudy
     ? `Cycle ${t.cycle} of ${t.totalCycles}`
-    : 'Break complete';
+    : isLastCycle
+      ? `All ${t.totalCycles} cycles complete`
+      : `Break complete · Cycle ${t.cycle - 1} of ${t.totalCycles}`;
 
   if (elFsCompletionTitle) {
-    elFsCompletionTitle.textContent =
-      (t && t.type === 'study') ? '✓ Session Complete' : '✓ Break Complete';
+    elFsCompletionTitle.textContent = isStudy ? '✓ Session Complete' : '✓ Break Complete';
   }
   if (elFsCompletionSub) {
     elFsCompletionSub.textContent = durationSecs > 0
       ? `${cycleText} · ${fmtDur(durationSecs)} logged`
       : cycleText;
+  }
+
+  // Configure the three action buttons based on context
+  if (elBtnNextPomodoro && elBtnStartRest && elBtnExitToMain) {
+    if (isStudy) {
+      // After a study session: offer Break or skip straight to next
+      elBtnNextPomodoro.hidden = isLastCycle; // no "next" if all done
+      elBtnStartRest.hidden    = false;
+      if (elBtnStartRestLabel) elBtnStartRestLabel.textContent = 'Start Break';
+      elBtnExitToMain.hidden   = false;
+    } else {
+      // After a break: offer next Pomodoro or exit
+      elBtnNextPomodoro.hidden = isLastCycle; // no "next" if all cycles done
+      elBtnStartRest.hidden    = true;         // no break after a break
+      elBtnExitToMain.hidden   = false;
+    }
   }
 
   // Hide the normal running-timer content, show completion panel
@@ -1905,9 +1998,79 @@ if (elAlarmDuration) {
   });
 }
 
-// Dismiss alarm / completion screen
-if (elBtnDismissAlarm) {
-  elBtnDismissAlarm.addEventListener('click', () => {
+// ── Completion screen: three action buttons ──
+
+// "Start Next Pomodoro" — stop alarm, increment study cycle, begin study
+if (elBtnNextPomodoro) {
+  elBtnNextPomodoro.addEventListener('click', () => {
+    alarm.stop();
+    hideCompletionScreen();
+    const t = state.timer;
+    // If we just finished a study session, cycle has NOT been incremented yet
+    // (it increments on break-end). So just begin the break first, or if
+    // the user skips break, start the next study segment directly.
+    // Here "Next Pomodoro" means: skip any pending break, go straight to study.
+    // Ensure cycle is sane — if coming from study, don't double-increment.
+    if (t.type === 'break') {
+      // cycle was already incremented when break started; begin study
+      t.type = 'study';
+      t.elapsed = 0;
+      t.targetSecs = t.studyMinutes * 60;
+      t.running = true;
+      t.startTs = Date.now();
+      t.pauses = 0;
+      t.sessionStart = Date.now();
+      t.completed = false;
+      t.alarmActive = false;
+      t.alarmStartTs = null;
+      persist(STORE.TIMER, t);
+      updateFsPhase();
+      tick();
+      music.play();
+    } else {
+      // Coming from study: transition to break first (saves cycle),
+      // then the break screen will offer next pomodoro.
+      // But user clicked "next pomodoro" — skip break, begin next cycle.
+      t.cycle = Math.min(t.cycle + 1, t.totalCycles + 1);
+      t.type = 'study';
+      t.elapsed = 0;
+      t.targetSecs = t.studyMinutes * 60;
+      t.running = true;
+      t.startTs = Date.now();
+      t.pauses = 0;
+      t.sessionStart = Date.now();
+      t.completed = false;
+      t.alarmActive = false;
+      t.alarmStartTs = null;
+      persist(STORE.TIMER, t);
+      updateFsPhase();
+      tick();
+      music.play();
+    }
+    updateNavBadge();
+    updatePomControls();
+    updatePauseStats();
+  });
+}
+
+// "Start Break" — stop alarm, begin break timer
+if (elBtnStartRest) {
+  elBtnStartRest.addEventListener('click', () => {
+    alarm.stop();
+    hideCompletionScreen();
+    const t = state.timer;
+    t.completed   = false;
+    t.alarmActive = false;
+    t.alarmStartTs = null;
+    beginBreak();
+    updateNavBadge();
+    updatePomControls();
+  });
+}
+
+// "Exit to Main" — stop alarm, full reset back to the pomodoro page
+if (elBtnExitToMain) {
+  elBtnExitToMain.addEventListener('click', () => {
     finishSession();
   });
 }
